@@ -1,0 +1,24 @@
+[
+  {
+    "name": "registerAgent",
+    "type": "function",
+    "inputs": [
+      { "name": "metadataURI", "type": "string" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "name": "getAgent",
+    "type": "function",
+    "inputs": [
+      { "name": "agentId", "type": "uint256" }
+    ],
+    "outputs": [
+      { "name": "owner", "type": "address" },
+      { "name": "metadataURI", "type": "string" },
+      { "name": "active", "type": "bool" }
+    ],
+    "stateMutability": "view"
+  }
+]

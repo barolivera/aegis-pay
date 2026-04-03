@@ -1,0 +1,12 @@
+[
+  {
+    "name": "setPolicy",
+    "type": "function",
+    "inputs": [
+      { "name": "warnThreshold", "type": "uint256" },
+      { "name": "blockThreshold", "type": "uint256" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  }
+]

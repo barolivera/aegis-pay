@@ -1,0 +1,14 @@
+[
+  {
+    "name": "createAssessment",
+    "type": "function",
+    "inputs": [
+      { "name": "agentId", "type": "uint256" },
+      { "name": "target", "type": "address" },
+      { "name": "score", "type": "uint256" },
+      { "name": "verdict", "type": "uint8" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  }
+]
