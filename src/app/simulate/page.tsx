@@ -15,61 +15,36 @@ interface SimResult {
   reasons: string[];
 }
 
-function randomInRange(min: number, max: number): number {
-  return Math.round(min + Math.random() * (max - min));
+const RISKY_PATTERNS = ["dead", "0000000000000000000000000000000000000000"];
+const ACTION_RISK: Record<string, number> = {
+  transfer: 0, swap: 10, "contract-call": 15, mint: 10, other: 5,
+};
+
+function computeRiskScore(target: string, amount: number, action: string): number {
+  let score = 0;
+  const addr = target.toLowerCase();
+  if (RISKY_PATTERNS.some((p) => addr.includes(p))) score += 60;
+  if (amount > 100) score += 35;
+  else if (amount > 10) score += 20;
+  else if (amount > 1) score += 10;
+  else score += 5;
+  score += ACTION_RISK[action] || 5;
+  score += 10;
+  return Math.max(0, Math.min(score, 100));
 }
 
-const allowReasons: Record<string, string[]> = {
-  transfer: ["Low value transfer", "Known target address"],
-  swap: ["Low value swap", "Standard liquidity pool"],
-  "contract-call": ["Low value contract call", "Verified contract"],
-  mint: ["Low value mint operation", "Standard token contract"],
-  other: ["Low value operation", "No risk signals detected"],
-};
-
-const warnReasons: Record<string, string[]> = {
-  transfer: ["Elevated amount", "Limited transaction history"],
-  swap: ["Elevated amount", "Swap action requires review", "Slippage risk detected"],
-  "contract-call": ["Elevated amount", "Unverified contract interaction", "Contract call requires review"],
-  mint: ["Elevated amount", "Mint action requires review", "Limited contract history"],
-  other: ["Elevated amount", "Unknown action type", "Requires additional review"],
-};
-
-const blockReasons: Record<string, string[]> = {
-  transfer: ["High value transfer", "Unknown recipient", "Amount exceeds safe threshold"],
-  swap: ["High value swap", "Unknown liquidity pool", "Swap flagged by policy engine"],
-  "contract-call": ["High value contract call", "Unknown contract", "Execute action flagged"],
-  mint: ["High value mint", "Unverified mint contract", "Mint operation blocked"],
-  other: ["High value operation", "Unknown action type", "Flagged by risk engine"],
-};
-
-function mockAssessment(
-  target: string,
-  amount: string,
-  action: string,
-): SimResult {
-  const amt = parseFloat(amount) || 0;
-  const addrLower = target.toLowerCase();
-
-  if (amt > 1000 || action === "contract-call" || addrLower.includes("dead")) {
-    const reasons = [...(blockReasons[action] || blockReasons.other)];
-    if (addrLower.includes("dead")) reasons[1] = "Flagged target address";
-    return { score: randomInRange(70, 100), verdict: "BLOCK", reasons };
-  }
-
-  if ((amt >= 10 && amt <= 1000) || action === "swap" || action === "mint") {
-    return {
-      score: randomInRange(31, 69),
-      verdict: "WARN",
-      reasons: warnReasons[action] || warnReasons.other,
-    };
-  }
-
-  return {
-    score: randomInRange(0, 30),
-    verdict: "ALLOW",
-    reasons: allowReasons[action] || allowReasons.other,
-  };
+function getReasonsForScore(score: number, verdict: Verdict, action: string, amount: number): string[] {
+  const reasons: string[] = [];
+  if (amount > 100) reasons.push("High value transaction");
+  else if (amount > 10) reasons.push("Moderate transaction amount");
+  else reasons.push("Low value transaction");
+  if (action === "contract-call") reasons.push("Contract interaction requires extra scrutiny");
+  else if (action === "swap") reasons.push("Swap operation detected");
+  else if (action === "mint") reasons.push("Mint operation detected");
+  if (verdict === "BLOCK") reasons.push("Risk score exceeds block threshold");
+  else if (verdict === "WARN") reasons.push("Score in warning zone — human review recommended");
+  else reasons.push("All checks passed — safe to execute");
+  return reasons;
 }
 
 interface TraceStep {
@@ -134,7 +109,9 @@ export default function SimulatePage() {
   });
   const [result, setResult] = useState<SimResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [thresholds, setThresholds] = useState<[number, number] | null>(null);
   const [operatorDecision, setOperatorDecision] = useState<
     "approved" | "rejected" | null
   >(null);
@@ -151,6 +128,13 @@ export default function SimulatePage() {
   const [traceProgress, setTraceProgress] = useState(-1); // -1 = idle, 0..4 = animating
   const [traceVisible, setTraceVisible] = useState(false);
   const pendingResult = useRef<SimResult | null>(null);
+
+  useEffect(() => {
+    fetch("/api/thresholds")
+      .then((r) => r.json())
+      .then((data) => { if (data.low !== undefined) setThresholds([data.low, data.medium]); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (traceProgress < 0 || traceProgress >= traceSteps.length) return;
@@ -174,22 +158,33 @@ export default function SimulatePage() {
     return () => clearTimeout(timer);
   }, [traceProgress, traceSteps.length]);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setResult(null);
+    setError(null);
     setOperatorDecision(null);
     resetRegister();
-
-    // Compute result immediately but hold it
-    const assessment = mockAssessment(form.target, form.amount, form.action);
-    pendingResult.current = assessment;
 
     // Build and start trace
     const steps = buildTraceSteps(form.target, form.amount, form.action);
     setTraceSteps(steps);
     setTraceVisible(true);
     setTraceProgress(0);
+
+    try {
+      const amt = parseFloat(form.amount) || 0;
+      const riskScore = computeRiskScore(form.target, amt, form.action);
+      const response = await fetch(`/api/verdict?score=${riskScore}`);
+      const json = await response.json();
+      if (json.error) throw new Error(json.error);
+      const verdict = json.verdict as Verdict;
+      const reasons = getReasonsForScore(riskScore, verdict, form.action, amt);
+      pendingResult.current = { score: riskScore, verdict, reasons };
+    } catch (err: any) {
+      setError(err.message || "Failed to query PolicyManager");
+      setLoading(false);
+    }
   }
 
   function handleApproval(decision: "approved" | "rejected") {
@@ -241,6 +236,17 @@ export default function SimulatePage() {
           Simulate Assessment
         </h1>
       </div>
+
+        {thresholds && (
+          <div className="mb-4 flex items-center justify-between rounded-lg px-4 py-2 text-xs font-mono" style={{ backgroundColor: "#0a0a0a", border: "1px solid #1a1a1a", color: "#555" }}>
+            <span>Active Policy</span>
+            <span>
+              <span className="text-emerald-400">ALLOW &lt;{thresholds[0]}</span>{" · "}
+              <span className="text-amber-400">WARN {thresholds[0]}-{thresholds[1]}</span>{" · "}
+              <span className="text-red-400">BLOCK &gt;{thresholds[1]}</span>
+            </span>
+          </div>
+        )}
 
         {/* Form */}
         <div
@@ -359,6 +365,10 @@ export default function SimulatePage() {
             </button>
           </form>
         </div>
+
+        {error && (
+          <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400">{error}</div>
+        )}
 
         {/* Assessment Trace */}
         <AnimatePresence>

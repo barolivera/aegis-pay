@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { VerdictBadge } from "@/components/demos/VerdictBadge";
 import { Save, CheckCircle2 } from "lucide-react";
@@ -9,6 +9,18 @@ import { policyManagerConfig } from "@/lib/contracts";
 
 export default function PolicyPage() {
   const [thresholds, setThresholds] = useState({ allow: 80, warn: 50 });
+
+  useEffect(() => {
+    fetch("/api/thresholds")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.low !== undefined && data.medium !== undefined) {
+          setThresholds({ warn: data.low, allow: data.medium });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const {
     data: txHash,
     writeContract,
