@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useWriteContract } from "wagmi";
 import { agentRegistryConfig } from "@/lib/contracts";
 
 const inputClass =
@@ -17,8 +17,7 @@ const inputStyle = {
 
 export default function AgentsPage() {
   const { address, isConnected } = useAccount();
-  const { data: hash, writeContract, isPending, error: writeError, reset } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const { data: hash, writeContract, isPending, isSuccess, error: writeError, reset } = useWriteContract();
 
   const [form, setForm] = useState({
     name: "",
@@ -136,11 +135,11 @@ export default function AgentsPage() {
 
           <button
             type="submit"
-            disabled={isPending || isConfirming}
+            disabled={isPending}
             className="flex h-10 w-full items-center justify-center rounded-md text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
             style={{ backgroundColor: "#2563EB" }}
           >
-            {isPending || isConfirming ? "Registering..." : "Register Agent"}
+            {isPending ? "Registering..." : "Register Agent"}
           </button>
         </form>
       </div>
