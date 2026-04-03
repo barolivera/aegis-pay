@@ -3,8 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { injected } from "wagmi/connectors";
 import {
   LayoutDashboard,
   Bot,
@@ -40,26 +38,43 @@ function RadarIcon({ className }: { className?: string }) {
 }
 
 function WalletSection() {
-  const { address, isConnected } = useAccount();
-  const { connect } = useConnect();
-  const { disconnect } = useDisconnect();
+  const [account, setAccount] = useState<string | null>(null);
 
-  if (isConnected && address) {
+  const connectWallet = async () => {
+    if (typeof window.ethereum !== "undefined") {
+      try {
+        const accounts = await window.ethereum.request({
+          method: "eth_requestAccounts",
+        });
+        setAccount(accounts[0]);
+      } catch (error) {
+        console.error("Error connecting wallet:", error);
+      }
+    } else {
+      alert("MetaMask not found. Please install MetaMask.");
+    }
+  };
+
+  const disconnectWallet = () => {
+    setAccount(null);
+  };
+
+  if (account) {
     return (
       <button
-        onClick={() => disconnect()}
+        onClick={disconnectWallet}
         className="flex items-center gap-2 px-1 font-mono text-[12px] hover:opacity-70 transition-opacity"
         style={{ color: "#888" }}
       >
         <span className="block h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-        {shortAddress(address)}
+        {shortAddress(account)}
       </button>
     );
   }
 
   return (
     <button
-      onClick={() => connect({ connector: injected() })}
+      onClick={connectWallet}
       className="group relative inline-flex w-full rounded-md transition-shadow hover:shadow-[0_0_20px_rgba(37,99,235,0.25)]"
     >
       <span
