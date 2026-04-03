@@ -219,7 +219,7 @@ export default function SimulatePage() {
                 {operatorDecision && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }} className={`mt-4 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium ${operatorDecision === "approved" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-red-500/30 bg-red-500/10 text-red-400"}`}>
                     {operatorDecision === "approved" ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
-                    {operatorDecision === "approved" ? "Action approved by operator" : "Action rejected by operator"}
+                    {operatorDecision === "approved" ? "Approved via Ledger Secure Flow" : "Rejected — transaction cancelled"}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -252,21 +252,43 @@ export default function SimulatePage() {
           )}
         </AnimatePresence>
 
+        {/* Ledger Human Approval Modal */}
         <AnimatePresence>
           {showModal && result && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="fixed inset-0 z-50 flex items-center justify-center px-4">
-              <div className="absolute inset-0 bg-black/60" onClick={() => handleApproval("rejected")} />
-              <motion.div initial={{ opacity: 0, scale: 0.95, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 8 }} transition={{ duration: 0.2 }} className="relative w-full max-w-md rounded-xl p-6 shadow-2xl" style={{ backgroundColor: "#0f0f0f", border: "1px solid #1a1a1a" }}>
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-amber-500/30" style={{ backgroundColor: "rgba(245, 158, 11, 0.1)" }}>
-                    <ShieldAlert className="w-4 h-4 text-amber-400" />
+              <div className="absolute inset-0 bg-black/80" onClick={() => handleApproval("rejected")} />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                transition={{ duration: 0.2 }}
+                className="relative w-full max-w-md rounded-3xl p-8 shadow-2xl"
+                style={{ backgroundColor: "#0a0a0a", border: "1px solid #222" }}
+              >
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "rgba(34, 197, 94, 0.1)", border: "1px solid rgba(34, 197, 94, 0.2)" }}>
+                    <ShieldAlert className="w-6 h-6 text-emerald-400" />
                   </div>
-                  <h2 className="text-lg font-semibold tracking-tight" style={{ color: "#f0f0f0" }}>Human Approval Required</h2>
+                  <div>
+                    <h2 className="text-xl font-semibold tracking-tight" style={{ color: "#f0f0f0" }}>Human Approval Required</h2>
+                    <p className="text-sm font-mono" style={{ color: "#555" }}>Ledger Secure Flow</p>
+                  </div>
                 </div>
-                <p className="text-sm mb-4" style={{ color: "#888" }}>This transaction scored in the warning zone. Review the details below and approve or reject. In production, this would be routed to a Ledger device or multisig for secure co-signing.</p>
-                <div className="rounded-lg p-4 mb-6 space-y-2" style={{ backgroundColor: "#0a0a0a", border: "1px solid #1a1a1a" }}>
+
+                {/* Warning message */}
+                <div className="rounded-2xl p-6 mb-6" style={{ backgroundColor: "#111", border: "1px solid #1a1a1a" }}>
+                  <p className="text-center leading-relaxed" style={{ color: "#ccc" }}>
+                    Esta accion tiene <span className="text-amber-400 font-semibold">riesgo medio</span>.<br />
+                    <span className="font-semibold" style={{ color: "#f0f0f0" }}>Ledger</span> recomienda aprobacion humana<br />
+                    antes de mover fondos.
+                  </p>
+                </div>
+
+                {/* Transaction details */}
+                <div className="rounded-2xl p-4 mb-6 space-y-2.5" style={{ backgroundColor: "#111", border: "1px solid #1a1a1a" }}>
                   {[
-                    { label: "Target", value: form.target },
+                    { label: "Target", value: form.target.length > 20 ? `${form.target.slice(0, 10)}...${form.target.slice(-8)}` : form.target },
                     { label: "Amount", value: `${form.amount} HBAR` },
                     { label: "Action", value: actionTypes.find((a) => a.value === form.action)?.label || form.action },
                     { label: "Risk Score", value: String(result.score), amber: true },
@@ -278,10 +300,33 @@ export default function SimulatePage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Buttons */}
                 <div className="flex gap-3">
-                  <button onClick={() => handleApproval("rejected")} className="flex-1 h-9 rounded-md border border-red-500/30 bg-red-500/10 text-sm font-medium text-red-400 hover:bg-red-500/20 transition-colors">Reject</button>
-                  <button onClick={() => handleApproval("approved")} className="flex-1 h-9 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-sm font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors">Approve</button>
+                  <button
+                    onClick={() => handleApproval("rejected")}
+                    className="flex-1 h-12 rounded-2xl text-sm font-medium transition-colors"
+                    style={{ backgroundColor: "#1a1a1a", color: "#888" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#222")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#1a1a1a")}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleApproval("approved")}
+                    className="flex-1 h-12 rounded-2xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-colors"
+                    style={{ backgroundColor: "#16a34a" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#15803d")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#16a34a")}
+                  >
+                    Approve with Ledger
+                    <ShieldAlert className="w-4 h-4" />
+                  </button>
                 </div>
+
+                <p className="text-center text-xs mt-5" style={{ color: "#333" }}>
+                  In production, this approval would require a physical Ledger device for Clear Signing
+                </p>
               </motion.div>
             </motion.div>
           )}
