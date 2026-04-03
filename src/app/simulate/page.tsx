@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { VerdictBadge } from "@/components/demos/VerdictBadge";
-import { ArrowRight, ShieldAlert, ShieldOff, Check, X, Loader2 } from "lucide-react";
+import { ArrowRight, ShieldAlert, ShieldOff, Check, X, Loader2, CheckCircle2 } from "lucide-react";
+import { useAccount, useWriteContract } from "wagmi";
+import { assessmentRegistryConfig } from "@/lib/contracts";
 
 type Verdict = "ALLOW" | "WARN" | "BLOCK";
 
@@ -136,7 +138,15 @@ export default function SimulatePage() {
   const [operatorDecision, setOperatorDecision] = useState<
     "approved" | "rejected" | null
   >(null);
-  const [registered, setRegistered] = useState(false);
+  const { address, isConnected } = useAccount();
+  const {
+    data: txHash,
+    writeContract,
+    isPending: isRegistering,
+    isSuccess: isRegistered,
+    error: registerError,
+    reset: resetRegister,
+  } = useWriteContract();
   const [traceSteps, setTraceSteps] = useState<TraceStep[]>([]);
   const [traceProgress, setTraceProgress] = useState(-1); // -1 = idle, 0..4 = animating
   const [traceVisible, setTraceVisible] = useState(false);
@@ -169,7 +179,7 @@ export default function SimulatePage() {
     setLoading(true);
     setResult(null);
     setOperatorDecision(null);
-    setRegistered(false);
+    resetRegister();
 
     // Compute result immediately but hold it
     const assessment = mockAssessment(form.target, form.amount, form.action);
@@ -188,7 +198,21 @@ export default function SimulatePage() {
   }
 
   function handleRegister() {
-    setRegistered(true);
+    if (!isConnected || !address || !result) return;
+
+    const normalizedTarget = form.target.toLowerCase() as `0x${string}`;
+
+    writeContract({
+      ...assessmentRegistryConfig,
+      functionName: "createAssessment",
+      args: [
+        address,
+        normalizedTarget,
+        BigInt(result.score),
+        result.verdict,
+        result.reasons[0],
+      ],
+    });
   }
 
   const showRegisterButton =
@@ -543,7 +567,7 @@ export default function SimulatePage() {
 
               {/* Register button */}
               <AnimatePresence>
-                {showRegisterButton && !registered && (
+                {showRegisterButton && !isRegistered && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
@@ -552,22 +576,35 @@ export default function SimulatePage() {
                   >
                     <button
                       onClick={handleRegister}
-                      className="flex h-10 w-full items-center justify-center gap-2 rounded-md text-sm font-medium text-white transition-colors hover:opacity-90"
+                      disabled={isRegistering}
+                      className="flex h-10 w-full items-center justify-center gap-2 rounded-md text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
                       style={{ backgroundColor: "#2563EB" }}
                     >
-                      Register Assessment on Hedera
+                      {isRegistering ? "Registering on Hedera..." : "Register Assessment on Hedera"}
                     </button>
                   </motion.div>
                 )}
-                {registered && (
+                {isRegistered && txHash && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.25 }}
                     className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-400"
                   >
-                    <Check className="w-4 h-4" />
-                    Assessment registered on Hedera
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    Assessment registered on Hedera ✓ tx: {txHash.slice(0, 6)}...{txHash.slice(-4)}
+                  </motion.div>
+                )}
+                {registerError && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.25 }}
+                    className="mt-4 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-400"
+                  >
+                    {registerError.message.length > 120
+                      ? registerError.message.slice(0, 120) + "..."
+                      : registerError.message}
                   </motion.div>
                 )}
               </AnimatePresence>
