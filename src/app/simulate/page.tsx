@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PageWrapper } from "@/components/demos/PageWrapper";
-import { Button } from "@/components/ui/button";
 import { VerdictBadge } from "@/components/demos/VerdictBadge";
-import { Activity, ArrowRight, ShieldAlert, ShieldOff, Check, X } from "lucide-react";
+import { ArrowRight, ShieldAlert, ShieldOff, Check, X, Loader2 } from "lucide-react";
 
 type Verdict = "ALLOW" | "WARN" | "BLOCK";
 
@@ -72,6 +70,48 @@ function mockAssessment(
   };
 }
 
+interface TraceStep {
+  label: string;
+  result: string;
+  status: "ok" | "warn" | "neutral";
+}
+
+const stepNumbers = ["①", "②", "③", "④", "⑤"];
+
+function buildTraceSteps(target: string, amount: string, action: string): TraceStep[] {
+  const amt = parseFloat(amount) || 0;
+  const knownAddress = target.toLowerCase().startsWith("0x") && !target.toLowerCase().includes("dead");
+  const actionLabel = actionTypes.find((a) => a.value === action)?.label || action;
+
+  return [
+    {
+      label: `Resolving target address...`,
+      result: knownAddress ? "Known contract" : "Unknown address",
+      status: knownAddress ? "ok" : "warn",
+    },
+    {
+      label: `Evaluating amount (${amount || "0"} USDC)...`,
+      result: amt > 1000 ? "High value" : amt >= 10 ? "Elevated" : "Low value",
+      status: amt > 1000 ? "warn" : amt >= 10 ? "warn" : "ok",
+    },
+    {
+      label: `Analyzing action type (${actionLabel})...`,
+      result: action === "contract-call" ? "High risk" : action === "swap" || action === "mint" ? "Requires review" : "Safe action",
+      status: action === "contract-call" ? "warn" : action === "swap" || action === "mint" ? "warn" : "ok",
+    },
+    {
+      label: `Applying policy thresholds...`,
+      result: "Thresholds loaded",
+      status: "ok",
+    },
+    {
+      label: `Computing verdict...`,
+      result: "Assessment complete",
+      status: "neutral",
+    },
+  ];
+}
+
 const actionTypes = [
   { value: "transfer", label: "Transfer" },
   { value: "contract-call", label: "Contract Call" },
@@ -97,6 +137,32 @@ export default function SimulatePage() {
     "approved" | "rejected" | null
   >(null);
   const [registered, setRegistered] = useState(false);
+  const [traceSteps, setTraceSteps] = useState<TraceStep[]>([]);
+  const [traceProgress, setTraceProgress] = useState(-1); // -1 = idle, 0..4 = animating
+  const [traceVisible, setTraceVisible] = useState(false);
+  const pendingResult = useRef<SimResult | null>(null);
+
+  useEffect(() => {
+    if (traceProgress < 0 || traceProgress >= traceSteps.length) return;
+    const timer = setTimeout(() => {
+      const next = traceProgress + 1;
+      setTraceProgress(next);
+      if (next >= traceSteps.length) {
+        // All steps done — show result after a brief pause
+        setTimeout(() => {
+          const assessment = pendingResult.current;
+          if (assessment) {
+            setResult(assessment);
+            setLoading(false);
+            if (assessment.verdict === "WARN") {
+              setShowModal(true);
+            }
+          }
+        }, 400);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [traceProgress, traceSteps.length]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -104,14 +170,16 @@ export default function SimulatePage() {
     setResult(null);
     setOperatorDecision(null);
     setRegistered(false);
-    setTimeout(() => {
-      const assessment = mockAssessment(form.target, form.amount, form.action);
-      setResult(assessment);
-      setLoading(false);
-      if (assessment.verdict === "WARN") {
-        setShowModal(true);
-      }
-    }, 800);
+
+    // Compute result immediately but hold it
+    const assessment = mockAssessment(form.target, form.amount, form.action);
+    pendingResult.current = assessment;
+
+    // Build and start trace
+    const steps = buildTraceSteps(form.target, form.amount, form.action);
+    setTraceSteps(steps);
+    setTraceVisible(true);
+    setTraceProgress(0);
   }
 
   function handleApproval(decision: "approved" | "rejected") {
@@ -129,25 +197,26 @@ export default function SimulatePage() {
       (result.verdict === "WARN" && operatorDecision === "approved"));
 
   return (
-    <PageWrapper>
-      <div className="max-w-lg mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-lg"
-            style={{ backgroundColor: "#141414", border: "1px solid #1a1a1a" }}
-          >
-            <Activity className="w-4 h-4" style={{ color: "#2563EB" }} />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight" style={{ color: "#f0f0f0" }}>
-              Simulate Assessment
-            </h1>
-            <p className="text-sm" style={{ color: "#555" }}>
-              Run a risk assessment before executing a transaction
-            </p>
-          </div>
-        </div>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+    >
+      {/* Header */}
+      <div className="mb-8">
+        <span
+          className="block font-mono tracking-[0.12em] mb-2"
+          style={{ fontSize: "11px", color: "#444" }}
+        >
+          SIMULATE &middot; RISK ASSESSMENT
+        </span>
+        <h1
+          className="text-2xl font-semibold tracking-tight"
+          style={{ color: "#f0f0f0" }}
+        >
+          Simulate Assessment
+        </h1>
+      </div>
 
         {/* Form */}
         <div
@@ -266,6 +335,114 @@ export default function SimulatePage() {
             </button>
           </form>
         </div>
+
+        {/* Assessment Trace */}
+        <AnimatePresence>
+          {traceVisible && traceSteps.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3 }}
+              className="mt-4 rounded-lg"
+              style={{ backgroundColor: "#050505", border: "1px solid #1a1a1a", padding: 16 }}
+            >
+              <span
+                className="block font-mono uppercase tracking-[0.14em] mb-4"
+                style={{ fontSize: "10px", color: "#444" }}
+              >
+                Assessment Trace
+              </span>
+
+              {/* Steps with vertical line */}
+              <div className="relative" style={{ paddingLeft: 20 }}>
+                {/* Vertical connector line */}
+                <div
+                  className="absolute top-0 bottom-0"
+                  style={{ left: 5, width: 1, backgroundColor: "#2563EB", opacity: 0.3 }}
+                />
+
+                <div className="space-y-3">
+                  {traceSteps.map((step, i) => {
+                    const isCompleted = i < traceProgress;
+                    const isCurrent = i === traceProgress && traceProgress < traceSteps.length;
+                    const isVisible = i <= traceProgress;
+
+                    if (!isVisible) return null;
+
+                    const resultColor =
+                      step.status === "ok" ? "#16a34a" : step.status === "warn" ? "#d97706" : "#2563EB";
+
+                    return (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -6 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="relative flex items-center justify-between gap-3"
+                      >
+                        {/* Dot on the vertical line */}
+                        <div
+                          className="absolute"
+                          style={{ left: -19, top: "50%", transform: "translateY(-50%)" }}
+                        >
+                          {isCurrent ? (
+                            <Loader2
+                              className="animate-spin"
+                              style={{ width: 10, height: 10, color: "#2563EB" }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: 7,
+                                height: 7,
+                                borderRadius: "50%",
+                                backgroundColor: resultColor,
+                                marginLeft: 1.5,
+                              }}
+                            />
+                          )}
+                        </div>
+
+                        {/* Left: number + label */}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="font-mono shrink-0"
+                            style={{ fontSize: "12px", color: "#444" }}
+                          >
+                            {stepNumbers[i]}
+                          </span>
+                          <span
+                            className="font-mono truncate"
+                            style={{
+                              fontSize: "12px",
+                              color: isCompleted ? "#ccc" : "#888",
+                            }}
+                          >
+                            {step.label}
+                          </span>
+                        </div>
+
+                        {/* Right: result */}
+                        {isCompleted && (
+                          <motion.span
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.2 }}
+                            className="font-mono shrink-0"
+                            style={{ fontSize: "11px", color: resultColor }}
+                          >
+                            {step.result}
+                          </motion.span>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Result card */}
         <AnimatePresence>
@@ -473,7 +650,6 @@ export default function SimulatePage() {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-    </PageWrapper>
+    </motion.div>
   );
 }
