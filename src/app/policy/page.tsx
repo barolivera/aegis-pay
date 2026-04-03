@@ -1,17 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { VerdictBadge } from "@/components/demos/VerdictBadge";
-import { Save, Check } from "lucide-react";
+import { Save, CheckCircle2 } from "lucide-react";
+import { useWriteContract } from "wagmi";
+import { policyManagerConfig } from "@/lib/contracts";
 
 export default function PolicyPage() {
   const [thresholds, setThresholds] = useState({ allow: 80, warn: 50 });
-  const [saved, setSaved] = useState(false);
+  const {
+    data: txHash,
+    writeContract,
+    isPending,
+    isSuccess,
+    error: writeError,
+    reset,
+  } = useWriteContract();
 
   function handleSave() {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    reset();
+    writeContract({
+      ...policyManagerConfig,
+      functionName: "setPolicy",
+      args: [BigInt(thresholds.warn), BigInt(thresholds.allow)],
+    });
   }
 
   return (
@@ -133,14 +146,12 @@ export default function PolicyPage() {
         {/* Save button */}
         <button
           onClick={handleSave}
-          className="flex h-10 w-full items-center justify-center gap-2 rounded-md text-sm font-medium text-white transition-colors hover:opacity-90"
+          disabled={isPending}
+          className="flex h-10 w-full items-center justify-center gap-2 rounded-md text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
           style={{ backgroundColor: "#2563EB" }}
         >
-          {saved ? (
-            <>
-              <Check className="w-4 h-4" />
-              Policy Saved
-            </>
+          {isPending ? (
+            "Saving..."
           ) : (
             <>
               <Save className="w-4 h-4" />
@@ -149,6 +160,37 @@ export default function PolicyPage() {
           )}
         </button>
       </div>
+
+      {/* Success banner */}
+      <AnimatePresence>
+        {isSuccess && txHash && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-400"
+          >
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            Policy saved on Hedera ✓ tx: {txHash.slice(0, 6)}...{txHash.slice(-4)}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Error banner */}
+      <AnimatePresence>
+        {writeError && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="mt-4 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-400"
+          >
+            {writeError.message.length > 120
+              ? writeError.message.slice(0, 120) + "..."
+              : writeError.message}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Current policy summary */}
       <div
