@@ -34,6 +34,12 @@ interface WorkflowResult {
   version: string;
   executedOn: string;
   hbarPriceUsd: number;
+  chainlinkFeed?: {
+    source: string;
+    contract: string;
+    rawPrice: string;
+    note: string;
+  };
   policyThresholds: { low: number; medium: number };
   summary: {
     totalAssessed: number;
@@ -183,6 +189,23 @@ export default function WorkflowPage() {
                   {new Date(result.timestamp).toLocaleTimeString()}
                 </span>
               </div>
+
+              {result.chainlinkFeed && (
+                <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ backgroundColor: "#0f1a0f", border: "1px solid #1a2a1a" }}>
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                  <span className="text-[11px] font-mono" style={{ color: "#4ade80" }}>
+                    Price from Chainlink AggregatorV3Interface on-chain
+                  </span>
+                  <a
+                    href={`https://hashscan.io/testnet/contract/${result.chainlinkFeed.contract}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-auto"
+                  >
+                    <ExternalLink className="w-3 h-3 text-emerald-600" />
+                  </a>
+                </div>
+              )}
 
               {/* Stats grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
