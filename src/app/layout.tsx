@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Inconsolata } from "next/font/google";
 
 import { Sidebar } from "@/components/sidebar";
+import { AgentInfo } from "@/components/agent-info";
 import { Providers } from "@/components/providers";
 
 import "./globals.css";
@@ -33,6 +34,7 @@ export default function RootLayout({
         style={{ backgroundColor: "#f7f7f8", color: "#0f0f10", margin: 0, padding: 0 }}
       >
         <Providers>
+          <AgentInfo />
           <div style={{ display: "flex", minHeight: "100vh" }}>
             <Sidebar />
             <main style={{ flex: 1, minWidth: 0, overflow: "auto", padding: "32px 32px", marginLeft: "240px", backgroundColor: "#f7f7f8" }}>
