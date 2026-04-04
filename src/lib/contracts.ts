@@ -5,6 +5,7 @@ export const ADDRESSES = {
   assessmentRegistry: "0xeA86E74c8c89a30F6180B4d5c3d9C58C981d3638" as const,
 };
 
+
 export const policyManagerAbi = [
   {
     type: "function",
@@ -150,3 +151,19 @@ export const agentRegistryAbi = [
     stateMutability: "nonpayable",
   },
 ] as const;
+
+// Wagmi contract config shortcuts
+export const agentRegistryConfig = {
+  address: ADDRESSES.agentRegistry as `0x${string}`,
+  abi: agentRegistryAbi,
+} as const;
+
+export const policyManagerConfig = {
+  address: ADDRESSES.policyManager as `0x${string}`,
+  abi: policyManagerAbi,
+} as const;
+
+export const assessmentRegistryConfig = {
+  address: ADDRESSES.assessmentRegistry as `0x${string}`,
+  abi: assessmentRegistryAbi,
+} as const;

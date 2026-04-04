@@ -29,7 +29,11 @@ function timeAgo(ts: number) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
+const container = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07 } },
+};
+
 const item = {
   hidden: { opacity: 0, y: 12 },
   show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
@@ -52,65 +56,162 @@ export default function HomePage() {
   }, []);
 
   const cards = [
-    { label: "REGISTERED AGENTS", value: stats.agentCount, icon: Bot },
-    { label: "TOTAL ASSESSMENTS", value: stats.total, icon: null },
-    { label: "BLOCKED ACTIONS", value: stats.blocked, icon: ShieldOff },
-    { label: "AVG RISK SCORE", value: stats.avgScore, icon: Activity },
+    { label: "REGISTERED AGENTS", value: stats.agentCount, icon: Bot, sub: "active on Hedera Testnet" },
+    { label: "TOTAL ASSESSMENTS", value: stats.total, icon: null, sub: "risk evaluations recorded on-chain" },
+    { label: "BLOCKED ACTIONS", value: stats.blocked, icon: ShieldOff, sub: "transactions prevented" },
+    { label: "AVG RISK SCORE", value: stats.avgScore, icon: Activity, sub: "across all assessments" },
   ];
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+    >
+      {/* Header */}
       <div className="mb-8">
-        <span className="block font-mono tracking-[0.12em] mb-2" style={{ fontSize: "11px", color: "#444" }}>
+        <span
+          className="block font-mono tracking-[0.12em] mb-2 text-xs"
+          style={{ color: "#a1a1aa" }}
+        >
           AEGISPAY &middot; HEDERA TESTNET
         </span>
-        <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "#f0f0f0" }}>Dashboard</h1>
+        <h1
+          className="text-3xl font-bold tracking-tight"
+          style={{ color: "#0f0f10" }}
+        >
+          Dashboard
+        </h1>
+        <p style={{ color: "var(--text-3)", fontSize: "14px", marginTop: "4px" }}>
+          Monitor your AI agents in real time on Hedera Testnet
+        </p>
       </div>
 
-      <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+      {/* Stat cards */}
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8"
+      >
         {cards.map((s) => (
-          <motion.div key={s.label} variants={item} className="rounded-xl p-5" style={{ backgroundColor: "#0f0f0f", border: "1px solid #1a1a1a" }}>
+          <motion.div
+            key={s.label}
+            variants={item}
+            className="p-6"
+            style={{
+              backgroundColor: "#ffffff",
+              border: "1px solid #ebebed",
+              borderRadius: "14px",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+            }}
+          >
             <div className="flex items-center justify-between mb-3">
-              <span className="font-mono tracking-[0.08em]" style={{ fontSize: "11px", color: "#444" }}>{s.label}</span>
-              {s.icon && <s.icon className="w-3.5 h-3.5" style={{ color: "#333" }} />}
+              <span
+                className="font-mono tracking-[0.12em]"
+                style={{ fontSize: "10px", color: "#a1a1aa" }}
+              >
+                {s.label}
+              </span>
+              {s.icon && <s.icon className="w-3.5 h-3.5" style={{ color: "#a1a1aa" }} />}
             </div>
-            <span className="font-mono font-semibold" style={{ fontSize: "28px", color: "#f0f0f0", lineHeight: 1 }}>
-              {loading ? "…" : s.value}
+            <span
+              className="text-4xl font-bold"
+              style={{ color: "#0f0f10", lineHeight: 1 }}
+            >
+              {loading ? "..." : s.value}
             </span>
+            <p style={{ color: "var(--text-3)", fontSize: "12px", marginTop: "6px" }}>
+              {s.sub}
+            </p>
           </motion.div>
         ))}
       </motion.div>
 
-      <div className="rounded-xl overflow-hidden mb-6" style={{ backgroundColor: "#0f0f0f", border: "1px solid #1a1a1a" }}>
-        <div className="px-5 py-4" style={{ borderBottom: "1px solid #1a1a1a" }}>
-          <span className="font-mono tracking-[0.08em]" style={{ fontSize: "11px", color: "#444" }}>RECENT ASSESSMENTS</span>
+      {/* Recent Assessments table */}
+      <div
+        className="overflow-hidden mb-6"
+        style={{
+          backgroundColor: "#ffffff",
+          border: "1px solid #ebebed",
+          borderRadius: "12px",
+        }}
+      >
+        <div
+          className="px-5 py-4"
+          style={{ backgroundColor: "#f7f7f8", borderBottom: "1px solid #ebebed" }}
+        >
+          <span
+            className="font-mono tracking-[0.1em]"
+            style={{ fontSize: "10px", color: "#a1a1aa" }}
+          >
+            RECENT ASSESSMENTS
+          </span>
         </div>
+
         {loading ? (
-          <div className="flex items-center justify-center gap-2 py-8" style={{ color: "#555" }}>
-            <Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Loading from Hedera...</span>
+          <div className="flex items-center justify-center gap-2 py-8" style={{ color: "#a1a1aa" }}>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">Loading from Hedera...</span>
           </div>
         ) : recent.length === 0 ? (
-          <div className="text-center py-8 text-sm" style={{ color: "#555" }}>
-            No assessments yet. <Link href="/simulate" className="text-[#2563EB] hover:underline">Run one</Link>
+          <div className="text-center py-8 text-sm" style={{ color: "#a1a1aa" }}>
+            No assessments yet.{" "}
+            <Link href="/simulate" style={{ color: "#5b5cf6" }} className="hover:underline">
+              Run one
+            </Link>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px]">
               <thead>
-                <tr style={{ borderBottom: "1px solid #1a1a1a" }}>
+                <tr style={{ borderBottom: "1px solid #ebebed" }}>
                   {["Agent", "Target", "Score", "Verdict", "Time"].map((h) => (
-                    <th key={h} className={`font-mono font-medium tracking-[0.06em] px-5 py-3 ${h === "Score" || h === "Time" ? "text-right" : h === "Verdict" ? "text-center" : "text-left"}`} style={{ fontSize: "11px", color: "#444" }}>{h.toUpperCase()}</th>
+                    <th
+                      key={h}
+                      className={`font-mono font-medium tracking-[0.1em] px-5 py-3 ${
+                        h === "Score" || h === "Time"
+                          ? "text-right"
+                          : h === "Verdict"
+                            ? "text-center"
+                            : "text-left"
+                      }`}
+                      style={{ fontSize: "10px", color: "#a1a1aa" }}
+                    >
+                      {h.toUpperCase()}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {recent.map((row, i) => (
-                  <tr key={i} className="transition-colors hover:bg-[#141414]" style={{ borderBottom: i < recent.length - 1 ? "1px solid #141414" : "none" }}>
-                    <td className="px-5 py-3 text-sm font-mono" style={{ color: "#e0e0e0" }}>{shortAddr(row.agent)}</td>
-                    <td className="px-5 py-3 text-sm font-mono" style={{ color: "#555" }}>{shortAddr(row.target)}</td>
-                    <td className="px-5 py-3 text-sm font-mono text-right" style={{ color: "#e0e0e0" }}>{row.riskScore}</td>
-                    <td className="px-5 py-3 text-center"><VerdictBadge verdict={row.verdict} /></td>
-                    <td className="px-5 py-3 text-sm font-mono text-right" style={{ color: "#444" }}>{timeAgo(row.timestamp)}</td>
+                  <tr
+                    key={i}
+                    className="transition-colors"
+                    style={{
+                      borderBottom:
+                        i < recent.length - 1
+                          ? "1px solid #ebebed"
+                          : "none",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f7f7f8")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                  >
+                    <td className="px-5 py-3 text-sm font-mono" style={{ color: "#52525b" }}>
+                      {shortAddr(row.agent)}
+                    </td>
+                    <td className="px-5 py-3 text-sm font-mono" style={{ color: "#52525b" }}>
+                      {shortAddr(row.target)}
+                    </td>
+                    <td className="px-5 py-3 text-sm font-mono font-semibold text-right" style={{ color: "#0f0f10" }}>
+                      {row.riskScore}
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      <VerdictBadge verdict={row.verdict} />
+                    </td>
+                    <td className="px-5 py-3 text-sm font-mono text-right" style={{ color: "#a1a1aa" }}>
+                      {timeAgo(row.timestamp)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -119,8 +220,14 @@ export default function HomePage() {
         )}
       </div>
 
-      <Link href="/simulate" className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: "#2563EB" }}>
-        Run Assessment <ArrowRight className="w-4 h-4" />
+      {/* CTA */}
+      <Link
+        href="/simulate"
+        className="inline-flex items-center gap-2 text-sm font-medium transition-colors"
+        style={{ color: "#5b5cf6" }}
+      >
+        Run Assessment
+        <ArrowRight className="w-4 h-4" />
       </Link>
     </motion.div>
   );

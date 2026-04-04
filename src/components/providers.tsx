@@ -9,8 +9,6 @@ import { wagmiConfig } from "@/lib/wagmi";
 import { initLedger } from "@/lib/ledger";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  useEffect(() => { initLedger(); }, []);
-
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -20,12 +18,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }),
   );
 
+  useEffect(() => { initLedger(); }, []);
+
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
           enableSystem={false}
         >
           {children}
