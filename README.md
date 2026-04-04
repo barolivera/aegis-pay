@@ -353,6 +353,138 @@ forge test -vvv       # 15/15 tests pass
 
 ---
 
+## Agent-Friendly Information
+
+> Structured reference for AI agents, copilots, and developer tools integrating with AegisPay.
+
+### Network
+
+```
+Chain:          Hedera Testnet
+Chain ID:       296
+RPC:            https://testnet.hashio.io/api
+Native Token:   HBAR (18 decimals)
+Explorer:       https://hashscan.io/testnet
+```
+
+### Contracts
+
+```
+AgentRegistry:      0xe0595502b10398D7702Ed43eDcf8101Fd67c0991
+PolicyManager:      0x226F68C0D8F26A478F4F64d2733376DAB98Fcc6c
+AssessmentRegistry: 0xeA86E74c8c89a30F6180B4d5c3d9C58C981d3638
+```
+
+### Contract Interfaces
+
+```solidity
+// AgentRegistry — Register and manage AI agent identities (ERC-8004 pattern)
+registerAgent(address agent, string metadataURI)    // Register a new agent (caller = owner)
+toggleAgent(address agent, bool active)             // Enable/disable agent (owner only)
+getAgent(address agent) -> (owner, metadataURI, active, registeredAt)
+agentCount() -> uint256
+
+// PolicyManager — Configurable risk policy engine
+getVerdict(uint256 riskScore) -> string             // Returns "ALLOW", "WARN", or "BLOCK"
+getThresholds() -> (uint256 low, uint256 medium)    // Current policy thresholds
+setPolicy(uint256 low, uint256 medium)              // Update thresholds (owner only)
+
+// AssessmentRegistry — Immutable on-chain audit trail
+createAssessment(address agent, address target, uint256 riskScore, string verdict, string reason) -> uint256
+getAssessment(uint256 id) -> (agent, target, riskScore, verdict, reason, timestamp)
+getAssessmentsByAgent(address agent) -> uint256[]
+totalAssessments() -> uint256
+```
+
+### Policy Rules
+
+```
+Risk Score    Verdict    Action
+─────────    ───────    ──────
+0  - 29      ALLOW      Agent executes transfer autonomously
+30 - 69      WARN       Requires human approval (Ledger device signs)
+70 - 100     BLOCK      Transfer denied, no funds moved
+```
+
+### Risk Score Calculation
+
+```
+Factor                  Points
+──────                  ──────
+Amount > 10 HBAR        +35
+Amount > 1 HBAR         +15
+Amount <= 1 HBAR        +5
+Known risky address     +60
+Trusted address         -10
+First interaction       +15
+
+Final score clamped to 0-100
+```
+
+### API Endpoints
+
+```
+GET /api/verdict?score={0-100}    -> { verdict: "ALLOW"|"WARN"|"BLOCK" }
+GET /api/thresholds               -> { low: 30, medium: 70 }
+GET /api/stats                    -> { agentCount, total, blocked, avgScore, recent[] }
+GET /api/assessments              -> Assessment[]
+```
+
+### Integration Example (Agent)
+
+```typescript
+import { HederaBuilder, handleTransaction, AgentMode } from "hedera-agent-kit";
+import { Client, PrivateKey, ContractCallQuery, ContractExecuteTransaction,
+         ContractFunctionParameters, Hbar, ContractId } from "@hashgraph/sdk";
+
+// 1. Setup Hedera client
+const client = Client.forTestnet().setOperator(accountId, privateKey);
+
+// 2. Check policy verdict
+const verdict = new ContractCallQuery()
+  .setContractId(ContractId.fromEvmAddress(0, 0, "0x226F...Fcc6c"))
+  .setGas(100_000)
+  .setFunction("getVerdict", new ContractFunctionParameters().addUint256(riskScore));
+const result = await verdict.execute(client);  // "ALLOW", "WARN", or "BLOCK"
+
+// 3. Transfer HBAR via Hedera Agent Kit (if ALLOW)
+const tx = HederaBuilder.transferHbar({
+  hbarTransfers: [
+    { accountId: "0.0.sender", amount: new Hbar(amount).negated() },
+    { accountId: "0.0.target", amount: new Hbar(amount) },
+  ],
+});
+await handleTransaction(tx, client, { mode: AgentMode.AUTONOMOUS });
+
+// 4. Record assessment on-chain
+const assess = new ContractExecuteTransaction()
+  .setContractId(ContractId.fromEvmAddress(0, 0, "0xeA86...d3638"))
+  .setGas(400_000)
+  .setFunction("createAssessment", new ContractFunctionParameters()
+    .addAddress(agentAddr)
+    .addAddress(targetAddr)
+    .addUint256(riskScore)
+    .addString("ALLOW")
+    .addString("Low risk transfer"));
+await assess.execute(client);
+```
+
+### Clear Signing (ERC-7730)
+
+Human-readable transaction descriptions for Ledger devices:
+
+```
+File                                    Contract              Functions
+────                                    ────────              ─────────
+aegispay-agent-registry.json            AgentRegistry         registerAgent, toggleAgent
+aegispay-policy-manager.json            PolicyManager         setPolicy
+aegispay-assessment-registry.json       AssessmentRegistry    createAssessment
+```
+
+Each file maps function parameters to labels like "AI Agent", "Risk Score (0-100)", "Transaction Target" — so the Ledger screen shows what you're actually signing, not raw calldata.
+
+---
+
 ## Team
 
 Built by **AegisPay** at ETHGlobal Cannes 2026.
