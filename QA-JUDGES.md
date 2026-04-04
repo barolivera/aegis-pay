@@ -71,6 +71,19 @@ Es la funcion del SDK de CRE que garantiza que todos los nodos del DON obtuviero
 
 ---
 
+## ENS
+
+**¿Usan ENS?**
+Si. El sidebar del frontend resuelve ENS names y avatares para la wallet conectada. Si tu address tiene un nombre .eth registrado, se muestra el nombre y la foto de perfil en vez del address crudo. Usamos los hooks `useEnsName` y `useEnsAvatar` de wagmi, resolviendo contra Ethereum mainnet.
+
+**¿Por qué ENS si estan en Hedera?**
+ENS es el estandar de identidad en el ecosistema EVM. Los agentes AI y sus operadores pueden tener nombres .eth. Mostrarlo en la UI hace que sea mas facil identificar quien esta operando — en vez de ver `0x5e07...e929` ves `alice.eth` con su avatar.
+
+**¿Funciona con cualquier wallet?**
+Si, si la address conectada tiene un ENS name registrado en mainnet, se resuelve automaticamente. Si no tiene, muestra el address normal.
+
+---
+
 ## Ledger
 
 **¿Cómo integran Ledger?**

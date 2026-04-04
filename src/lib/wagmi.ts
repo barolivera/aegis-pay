@@ -1,4 +1,5 @@
 import { createConfig, http } from "wagmi";
+import { mainnet } from "wagmi/chains";
 import { type Chain, defineChain } from "viem";
 
 /* ── Hedera Testnet (chain 296) ────────────────────────────── */
@@ -17,9 +18,10 @@ export const hederaTestnet: Chain = defineChain({
 
 /* ── Wagmi config ──────────────────────────────────────────── */
 export const wagmiConfig = createConfig({
-  chains: [hederaTestnet],
+  chains: [hederaTestnet, mainnet],
   transports: {
     [hederaTestnet.id]: http("https://testnet.hashio.io/api"),
+    [mainnet.id]: http(), // for ENS resolution
   },
   ssr: true,
 });

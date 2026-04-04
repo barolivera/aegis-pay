@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAccount, useConnect } from "wagmi";
+import { useAccount, useConnect, useEnsName, useEnsAvatar } from "wagmi";
 import { injected } from "wagmi/connectors";
 import {
   LayoutDashboard,
@@ -44,12 +44,26 @@ function RadarIcon({ className }: { className?: string }) {
 function WalletSection() {
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
+  const { data: ensName } = useEnsName({ address, chainId: 1 });
+  const { data: ensAvatar } = useEnsAvatar({ name: ensName ?? undefined, chainId: 1 });
 
   if (isConnected && address) {
     return (
-      <div className="flex items-center gap-2 px-1 font-mono text-[12px]" style={{ color: "#888" }}>
-        <span className="block h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-        {shortAddress(address)}
+      <div className="flex items-center gap-2 px-1">
+        {ensAvatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={ensAvatar} alt="" className="h-6 w-6 rounded-full shrink-0" />
+        ) : (
+          <span className="block h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+        )}
+        <div className="flex flex-col">
+          {ensName && (
+            <span className="text-[12px] font-medium" style={{ color: "#ccc" }}>{ensName}</span>
+          )}
+          <span className="font-mono text-[11px]" style={{ color: "#666" }}>
+            {shortAddress(address)}
+          </span>
+        </div>
       </div>
     );
   }
