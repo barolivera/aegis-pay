@@ -1,18 +1,22 @@
 import { createConfig, http } from "wagmi";
-import { mainnet, sepolia } from "wagmi/chains";
-import { injected } from "wagmi/connectors";
-import { hederaTestnet } from "./hedera";
+import { type Chain, defineChain } from "viem";
 
-function rpc(url: string | undefined) {
-  return url && url.length > 0 ? http(url) : http();
-}
+export const hederaTestnet: Chain = defineChain({
+  id: 296,
+  name: "Hedera Testnet",
+  nativeCurrency: { name: "HBAR", symbol: "HBAR", decimals: 18 },
+  rpcUrls: {
+    default: { http: ["https://testnet.hashio.io/api"] },
+  },
+  blockExplorers: {
+    default: { name: "HashScan", url: "https://hashscan.io/testnet" },
+  },
+  testnet: true,
+});
 
 export const wagmiConfig = createConfig({
-  chains: [mainnet, sepolia, hederaTestnet],
-  connectors: [injected()],
+  chains: [hederaTestnet],
   transports: {
-    [mainnet.id]: http(),
-    [sepolia.id]: rpc(process.env.NEXT_PUBLIC_RPC_SEPOLIA),
     [hederaTestnet.id]: http("https://testnet.hashio.io/api"),
   },
   ssr: true,

@@ -4,8 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { VerdictBadge } from "@/components/demos/VerdictBadge";
 import { ArrowRight, ShieldAlert, ShieldOff, Check, X, Loader2, CheckCircle2, Activity } from "lucide-react";
-import { useAccount, useWriteContract } from "wagmi";
+import { useAccount, useWriteContract, useConnectorClient } from "wagmi";
 import { assessmentRegistryConfig } from "@/lib/contracts";
+import { hederaTestnet } from "@/lib/wagmi";
 
 type Verdict = "ALLOW" | "WARN" | "BLOCK";
 
@@ -158,6 +159,10 @@ export default function SimulatePage() {
     return () => clearTimeout(timer);
   }, [traceProgress, traceSteps.length]);
 
+  const { data: connectorClient } = useConnectorClient({ chainId: hederaTestnet.id });
+  const isLedger = connectorClient?.transport?.name === "Ledger" ||
+    connectorClient?.account?.source === "ledger";
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -190,6 +195,7 @@ export default function SimulatePage() {
   function handleApproval(decision: "approved" | "rejected") {
     setShowModal(false);
     setOperatorDecision(decision);
+    if (decision === "approved" && result) { handleRegister(); }
   }
 
   function handleRegister() {
@@ -590,7 +596,7 @@ export default function SimulatePage() {
                       className="flex h-10 w-full items-center justify-center gap-2 rounded-md text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
                       style={{ backgroundColor: "#2563EB" }}
                     >
-                      {isRegistering ? "Registering on Hedera..." : "Register Assessment on Hedera"}
+                      {isRegistering ? (isLedger ? "Sign on Ledger device…" : "Confirm in wallet…") : "Register Assessment on Hedera"}
                     </button>
                   </motion.div>
                 )}
@@ -731,7 +737,9 @@ export default function SimulatePage() {
                 </div>
 
                 <p className="text-center text-xs mt-5" style={{ color: "#333" }}>
-                  In production, this approval would require a physical Ledger device for Clear Signing
+                  {isLedger
+                    ? "Your Ledger device will display Clear Signing details for this transaction"
+                    : "Connect a Ledger device for hardware-secured Clear Signing approval"}
                 </p>
               </motion.div>
             </motion.div>
