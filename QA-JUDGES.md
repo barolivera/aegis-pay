@@ -12,8 +12,26 @@ Es una trust layer para agentes AI autonomos. Antes de que un agente ejecute un 
 **¿Qué problema resuelve?**
 Los agentes AI pueden pagar APIs, servicios y herramientas sin intervencion humana. Pero si un agente intenta enviar fondos a una direccion sospechosa o hacer una transaccion de alto valor, no hay nada que lo detenga. AegisPay es ese freno inteligente.
 
-**¿Cómo funciona el risk scoring?**
-Se calculan puntos segun: monto de la transaccion, reputacion de la direccion destino, tipo de accion (transfer, swap, contract-call), si es primera interaccion, y el valor en USD real (via Chainlink Price Feed). El score final va de 0 a 100.
+**¿Cómo funciona el risk scoring? / How do you calculate the risk?**
+Cada transaccion se evalua con 5 factores que suman puntos:
+
+| Factor | Puntos | Ejemplo |
+|--------|--------|---------|
+| **Monto en USD** | +35 si >$1000, +15 si >$100, +5 si bajo | 50 HBAR × $0.087 = $4.35 → +5 |
+| **Direccion destino** | +60 si es address riesgosa (burn, zero) | `0x...dead` → +60 |
+| **Tipo de accion** | +15 contract-call, +10 swap, +10 mint, 0 transfer | Swap → +10 |
+| **Primera interaccion** | +15 si nunca se interactuo con ese target | Siempre +15 en demo |
+| **Base** | +10 siempre | Base risk |
+
+El score se clampea entre 0-100. Despues el PolicyManager on-chain decide:
+- Score < 30 → ALLOW (ej: transfer de 0.5 HBAR a address conocida = score ~15)
+- Score 30-69 → WARN (ej: swap de 50 HBAR a address nueva = score ~45)
+- Score >= 70 → BLOCK (ej: transfer a burn address = score ~85)
+
+**Ejemplo concreto de la demo:**
+- Transfer 0.5 HBAR a address normal: base(10) + low_value(5) + transfer(0) + first(15) = **30 → ALLOW** (justo en el limite)
+- Swap 50 HBAR a address nueva: base(10) + low_value(5) + swap(10) + first(15) = **40 → WARN**
+- Transfer 200 HBAR a 0x...dead: base(10) + risky(60) + low_value(5) + transfer(0) + first(15) = **90 → BLOCK**
 
 **¿Qué pasa con cada verdict?**
 - **ALLOW** (score < 30): El agente ejecuta automaticamente
@@ -39,6 +57,12 @@ Si, los tres estan verificados en HashScan (el explorer de Hedera).
 
 **¿Usan Hedera Agent Kit?**
 Si, el agente autonomo usa Hedera Agent Kit SDK para hacer transfers nativos de HBAR con `AgentMode.AUTONOMOUS`.
+
+**¿Qué les parecio Hedera? / What was your experience with Hedera?**
+Muy buena. La compatibilidad EVM hace que deployar con Foundry sea igual que en Ethereum — mismo tooling, mismos ABIs. Los fees son practicamente gratis (~$0.001 por tx), lo cual es clave para nosotros porque un agente AI puede hacer decenas de assessments por hora. La finality de 3-5 segundos hace que la UX sea fluida. El JSON-RPC relay via hashio.io funciona sin problemas con wagmi/viem.
+
+**¿Tuvieron problemas con la documentacion de Hedera?**
+La documentacion del JSON-RPC relay y la parte EVM esta bien. Lo unico que nos costo un poco fue encontrar los endpoints correctos para testnet (`https://testnet.hashio.io/api`) y configurar el chain ID 296 en wagmi, pero una vez que lo encontramos fue plug and play. HashScan como explorer es muy claro para verificar contratos y transacciones.
 
 **¿Qué es ERC-8004?**
 Es un estandar para identidad on-chain de agentes AI. Nuestro AgentRegistry sigue ese patron: cada agente tiene owner, metadata URI, estado activo, y timestamp de registro.
