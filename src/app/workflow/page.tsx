@@ -86,7 +86,7 @@ export default function WorkflowPage() {
 
   return (
     <PageWrapper>
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3 mb-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ backgroundColor: "#141414", border: "1px solid #1a1a1a" }}>
@@ -101,7 +101,7 @@ export default function WorkflowPage() {
         </div>
 
         {/* Chainlink badge */}
-        <div className="mb-6 flex items-center gap-2 rounded-lg px-3 py-2" style={{ backgroundColor: "#0a1628", border: "1px solid #1a2a4a" }}>
+        <div className="mt-6 mb-6 flex items-center gap-2 rounded-lg px-3 py-2" style={{ backgroundColor: "#0a1628", border: "1px solid #1a2a4a" }}>
           <Server className="w-3.5 h-3.5" style={{ color: "#375BD2" }} />
           <span className="text-xs font-mono" style={{ color: "#6B8AFF" }}>
             Powered by Chainlink Runtime Environment (CRE)
@@ -214,7 +214,7 @@ export default function WorkflowPage() {
                     TRANSACTION ASSESSMENTS
                   </p>
                 </div>
-                <div className="divide-y divide-[#1a1a1a]">
+                <div>
                   {result.assessments.map((a, i) => (
                     <motion.div
                       key={i}
@@ -222,7 +222,7 @@ export default function WorkflowPage() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.1 }}
                       className="px-4 py-3"
-                      style={{ backgroundColor: "#0a0a0a" }}
+                      style={{ backgroundColor: "#0a0a0a", borderTop: i > 0 ? "1px solid #1a1a1a" : undefined }}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
