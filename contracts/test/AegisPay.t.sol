@@ -126,4 +126,91 @@ contract AegisPayTest is Test {
         vm.expectRevert("Assessment does not exist");
         assessments.getAssessment(999);
     }
+
+    // --- PolicyManager + Chainlink Price Feed ---
+
+    function test_setPriceFeed() public {
+        MockPriceFeed feed = new MockPriceFeed(8723000, 8); // $0.08723
+        policy.setPriceFeed(address(feed));
+        assertEq(address(policy.priceFeed()), address(feed));
+    }
+
+    function test_getLatestPrice() public {
+        MockPriceFeed feed = new MockPriceFeed(8723000, 8);
+        policy.setPriceFeed(address(feed));
+        (int256 price, uint8 decimals) = policy.getLatestPrice();
+        assertEq(price, 8723000);
+        assertEq(decimals, 8);
+    }
+
+    function test_verdictWithPrice_allow() public {
+        // 50 HBAR at $0.087 = $4.35 → low value, no adjustment
+        MockPriceFeed feed = new MockPriceFeed(8700000, 8); // $0.087
+        policy.setPriceFeed(address(feed));
+        (string memory verdict, uint256 adjusted, uint256 usdVal) =
+            policy.getVerdictWithPrice(10, 50 ether);
+        assertEq(keccak256(bytes(verdict)), keccak256("ALLOW"));
+        assertEq(adjusted, 10); // no adjustment for low value
+        assertTrue(usdVal < 100e8); // < $100
+    }
+
+    function test_verdictWithPrice_warn_midValue() public {
+        // 5000 HBAR at $0.087 = $435 → mid value (+15)
+        MockPriceFeed feed = new MockPriceFeed(8700000, 8);
+        policy.setPriceFeed(address(feed));
+        (string memory verdict, uint256 adjusted,) =
+            policy.getVerdictWithPrice(20, 5000 ether);
+        assertEq(adjusted, 35); // 20 + 15
+        assertEq(keccak256(bytes(verdict)), keccak256("WARN"));
+    }
+
+    function test_verdictWithPrice_block_highValue() public {
+        // 50000 HBAR at $0.087 = $4350 → high value (+35)
+        MockPriceFeed feed = new MockPriceFeed(8700000, 8);
+        policy.setPriceFeed(address(feed));
+        (string memory verdict, uint256 adjusted,) =
+            policy.getVerdictWithPrice(40, 50000 ether);
+        assertEq(adjusted, 75); // 40 + 35
+        assertEq(keccak256(bytes(verdict)), keccak256("BLOCK"));
+    }
+
+    function test_verdictWithPrice_emitsEvent() public {
+        MockPriceFeed feed = new MockPriceFeed(8700000, 8);
+        policy.setPriceFeed(address(feed));
+        vm.expectEmit(false, false, false, false);
+        emit PolicyManager.PriceAwareVerdict(10, 10, 50 ether, 8700000, 0, "ALLOW");
+        policy.getVerdictWithPrice(10, 50 ether);
+    }
+
+    function test_verdictWithPrice_revert_noFeed() public {
+        vm.expectRevert("Price feed not set");
+        policy.getVerdictWithPrice(10, 50 ether);
+    }
+
+    function test_setValueThresholds() public {
+        policy.setValueThresholds(5000e8, 500e8);
+        assertEq(policy.highValueUsd(), 5000e8);
+        assertEq(policy.midValueUsd(), 500e8);
+    }
+}
+
+// Mock Chainlink AggregatorV3Interface for testing
+contract MockPriceFeed {
+    int256 private _price;
+    uint8 private _decimals;
+
+    constructor(int256 price_, uint8 decimals_) {
+        _price = price_;
+        _decimals = decimals_;
+    }
+
+    function latestRoundData() external view returns (
+        uint80, int256, uint256, uint256, uint80
+    ) {
+        return (1, _price, block.timestamp, block.timestamp, 1);
+    }
+
+    function decimals() external view returns (uint8) {
+        return _decimals;
+    }
 }
