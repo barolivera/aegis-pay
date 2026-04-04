@@ -28,7 +28,7 @@ const navItems = [
 
 function RadarIcon({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" width="20" height="20" className={className} aria-hidden="true">
       <circle cx="12" cy="12" r="10" stroke="#2563EB" strokeWidth="1.5" opacity="0.3" />
       <circle cx="12" cy="12" r="6" stroke="#2563EB" strokeWidth="1.5" opacity="0.5" />
       <circle cx="12" cy="12" r="2" fill="#2563EB" />

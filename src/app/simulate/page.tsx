@@ -67,7 +67,7 @@ function buildTraceSteps(target: string, amount: string, action: string): TraceS
       status: knownAddress ? "ok" : "warn",
     },
     {
-      label: `Evaluating amount (${amount || "0"} USDC)...`,
+      label: `Evaluating amount (${amount || "0"} HBAR)...`,
       result: amt > 1000 ? "High value" : amt >= 10 ? "Elevated" : "Low value",
       status: amt > 1000 ? "warn" : amt >= 10 ? "warn" : "ok",
     },
@@ -317,7 +317,7 @@ export default function SimulatePage() {
                     className="absolute right-3 top-1/2 -translate-y-1/2 font-mono"
                     style={{ fontSize: "11px", color: "#444" }}
                   >
-                    USDC
+                    HBAR
                   </span>
                 </div>
               </div>
@@ -559,8 +559,8 @@ export default function SimulatePage() {
                       <X className="w-4 h-4" />
                     )}
                     {operatorDecision === "approved"
-                      ? "Action approved by operator"
-                      : "Action rejected by operator"}
+                      ? "Approved via Ledger Secure Flow"
+                      : "Rejected — transaction cancelled"}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -633,7 +633,7 @@ export default function SimulatePage() {
               className="fixed inset-0 z-50 flex items-center justify-center px-4"
             >
               <div
-                className="absolute inset-0 bg-black/60"
+                className="absolute inset-0 bg-black/80"
                 onClick={() => handleApproval("rejected")}
               />
 
@@ -642,28 +642,42 @@ export default function SimulatePage() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 8 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="relative w-full max-w-md rounded-xl p-6 shadow-2xl"
-                style={{ backgroundColor: "#0f0f0f", border: "1px solid #1a1a1a" }}
+                className="relative w-full max-w-md rounded-3xl p-8 shadow-2xl"
+                style={{ backgroundColor: "#0a0a0a", border: "1px solid #222" }}
               >
                 <div className="flex items-center gap-3 mb-5">
                   <div
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-amber-500/30"
-                    style={{ backgroundColor: "rgba(245, 158, 11, 0.1)" }}
+                    className="flex w-12 h-12 items-center justify-center rounded-2xl"
+                    style={{ backgroundColor: "rgba(34, 197, 94, 0.1)", border: "1px solid rgba(34, 197, 94, 0.2)" }}
                   >
-                    <ShieldAlert className="w-4 h-4 text-amber-400" />
+                    <ShieldAlert className="text-emerald-400 w-6 h-6" />
                   </div>
-                  <h2 className="text-lg font-semibold tracking-tight" style={{ color: "#f0f0f0" }}>
-                    Human Approval Required
-                  </h2>
+                  <div>
+                    <h2 className="text-xl font-semibold tracking-tight" style={{ color: "#f0f0f0" }}>
+                      Human Approval Required
+                    </h2>
+                    <p className="text-sm font-mono" style={{ color: "#555" }}>
+                      Ledger Secure Flow
+                    </p>
+                  </div>
                 </div>
 
                 <div
-                  className="rounded-lg p-4 mb-6 space-y-2"
+                  className="rounded-2xl p-6 mb-6"
+                  style={{ backgroundColor: "#111", border: "1px solid #1a1a1a" }}
+                >
+                  <p className="text-sm mb-4" style={{ color: "#999" }}>
+                    Esta accion tiene riesgo <span className="text-amber-400 font-semibold">medio</span>. Ledger recomienda aprobacion humana antes de mover fondos.
+                  </p>
+                </div>
+
+                <div
+                  className="rounded-2xl p-4 mb-6 space-y-2"
                   style={{ backgroundColor: "#0a0a0a", border: "1px solid #1a1a1a" }}
                 >
                   {[
-                    { label: "Target", value: form.target, mono: true },
-                    { label: "Amount", value: `${form.amount} USDC`, mono: true },
+                    { label: "Target", value: form.target.length > 18 ? form.target.slice(0, 10) + "..." + form.target.slice(-8) : form.target, mono: true },
+                    { label: "Amount", value: `${form.amount} HBAR`, mono: true },
                     { label: "Action", value: actionTypes.find((a) => a.value === form.action)?.label || form.action, mono: true },
                     { label: "Risk Score", value: String(result.score), mono: true, amber: true },
                   ].map((row) => (
@@ -682,17 +696,28 @@ export default function SimulatePage() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => handleApproval("rejected")}
-                    className="flex-1 h-9 rounded-md border border-red-500/30 bg-red-500/10 text-sm font-medium text-red-400 hover:bg-red-500/20 transition-colors"
+                    className="flex-1 h-12 rounded-2xl text-sm transition-colors"
+                    style={{ backgroundColor: "#1a1a1a", color: "#888" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#222")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#1a1a1a")}
                   >
-                    Reject
+                    Cancel
                   </button>
                   <button
                     onClick={() => handleApproval("approved")}
-                    className="flex-1 h-9 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-sm font-medium text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                    className="flex-1 h-12 rounded-2xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition-colors"
+                    style={{ backgroundColor: "#16a34a" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#15803d")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#16a34a")}
                   >
-                    Approve
+                    Approve with Ledger
+                    <ShieldAlert className="w-4 h-4" />
                   </button>
                 </div>
+
+                <p className="text-center text-xs mt-5" style={{ color: "#333" }}>
+                  In production, this approval would require a physical Ledger device for Clear Signing
+                </p>
               </motion.div>
             </motion.div>
           )}

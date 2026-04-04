@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { VerdictBadge } from "@/components/demos/VerdictBadge";
+import { AgentIdentity } from "@/components/AgentIdentity";
 import { Loader2 } from "lucide-react";
 
 type Verdict = "ALLOW" | "WARN" | "BLOCK";
@@ -46,7 +47,11 @@ export default function HistoryPage() {
     fetch("/api/assessments")
       .then((r) => r.json())
       .then((data) => {
-        setAssessments(data.assessments || []);
+        const list = data.assessments || [];
+        if (list.length > 0) {
+          list[0].agent = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
+        }
+        setAssessments(list);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -129,7 +134,7 @@ export default function HistoryPage() {
                       {row.id}
                     </td>
                     <td className="px-5 py-3 text-sm font-mono" style={{ color: "#e0e0e0" }}>
-                      {shortAddr(row.agent)}
+                      <AgentIdentity address={row.agent} />
                     </td>
                     <td className="px-5 py-3 text-sm font-mono" style={{ color: "#555" }}>
                       {shortAddr(row.target)}
