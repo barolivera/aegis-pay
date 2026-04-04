@@ -8,7 +8,9 @@
     "deploy-local": "tsx src/deploy-local.ts"
   },
   "dependencies": {
+    "@hashgraph/sdk": "^2.81.0",
     "dotenv": "^16.6.1",
+    "hedera-agent-kit": "^3.8.2",
     "viem": "^2.21.0"
   },
   "devDependencies": {

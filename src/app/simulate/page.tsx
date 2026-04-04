@@ -91,7 +91,7 @@ export default function SimulatePage() {
   const isLedger = connectorClient?.transport?.name === "Ledger" ||
     connectorClient?.account?.source === "ledger";
 
-  const { writeContract, isPending: isWritePending, data: writeTxHash } = useWriteContract();
+  const { writeContract, isPending: isWritePending, data: writeTxHash, reset: resetWrite } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: writeTxHash });
 
   async function handleSubmit(e: React.FormEvent) {
@@ -100,6 +100,7 @@ export default function SimulatePage() {
     setResult(null);
     setError(null);
     setOperatorDecision(null);
+    resetWrite();
 
     try {
       const amt = parseFloat(form.amount) || 0;
@@ -248,13 +249,20 @@ export default function SimulatePage() {
               )}
 
               {isConfirmed && writeTxHash && (
-                <div className="mt-4 space-y-2">
+                <div className="mt-4 space-y-3">
                   <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-400">
                     <Check className="w-4 h-4" />Assessment registered on Hedera
                   </div>
                   <a href={`https://hashscan.io/testnet/transaction/${writeTxHash}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs font-mono hover:underline" style={{ color: "#555" }}>
                     <ExternalLink className="w-3 h-3" />View on HashScan
                   </a>
+                  <button
+                    onClick={() => { setResult(null); setOperatorDecision(null); resetWrite(); setForm({ agent: "", target: "", amount: "", action: "transfer" }); }}
+                    className="flex h-10 w-full items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors hover:opacity-90"
+                    style={{ backgroundColor: "#1a1a1a", color: "#888", border: "1px solid #333" }}
+                  >
+                    <Activity className="w-4 h-4" />New Assessment
+                  </button>
                 </div>
               )}
             </motion.div>
@@ -288,9 +296,9 @@ export default function SimulatePage() {
                 {/* Warning message */}
                 <div className="rounded-2xl p-6 mb-6" style={{ backgroundColor: "#111", border: "1px solid #1a1a1a" }}>
                   <p className="text-center leading-relaxed" style={{ color: "#ccc" }}>
-                    Esta accion tiene <span className="text-amber-400 font-semibold">riesgo medio</span>.<br />
-                    <span className="font-semibold" style={{ color: "#f0f0f0" }}>Ledger</span> recomienda aprobacion humana<br />
-                    antes de mover fondos.
+                    This action has <span className="text-amber-400 font-semibold">medium risk</span>.<br />
+                    <span className="font-semibold" style={{ color: "#f0f0f0" }}>Ledger</span> requires human approval<br />
+                    before moving funds.
                   </p>
                 </div>
 
