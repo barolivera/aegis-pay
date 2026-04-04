@@ -239,6 +239,9 @@ export default function SimulatePage() {
         >
           Simulate Assessment
         </h1>
+        <p style={{ color: "var(--text-3)", fontSize: "14px", marginTop: "4px" }}>
+          Test the risk engine before your agent executes a real transaction
+        </p>
       </div>
 
         {thresholds && (

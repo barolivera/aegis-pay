@@ -56,10 +56,10 @@ export default function HomePage() {
   }, []);
 
   const cards = [
-    { label: "REGISTERED AGENTS", value: stats.agentCount, icon: Bot },
-    { label: "TOTAL ASSESSMENTS", value: stats.total, icon: null },
-    { label: "BLOCKED ACTIONS", value: stats.blocked, icon: ShieldOff },
-    { label: "AVG RISK SCORE", value: stats.avgScore, icon: Activity },
+    { label: "REGISTERED AGENTS", value: stats.agentCount, icon: Bot, sub: "active on Hedera Testnet" },
+    { label: "TOTAL ASSESSMENTS", value: stats.total, icon: null, sub: "risk evaluations recorded on-chain" },
+    { label: "BLOCKED ACTIONS", value: stats.blocked, icon: ShieldOff, sub: "transactions prevented", subColor: "#dc2626" },
+    { label: "AVG RISK SCORE", value: stats.avgScore, icon: Activity, sub: "across all assessments" },
   ];
 
   return (
@@ -82,6 +82,9 @@ export default function HomePage() {
         >
           Dashboard
         </h1>
+        <p style={{ color: "var(--text-3)", fontSize: "14px", marginTop: "4px" }}>
+          Monitor your AI agents in real time on Hedera Testnet
+        </p>
       </div>
 
       {/* Stat cards */}
@@ -118,6 +121,9 @@ export default function HomePage() {
             >
               {loading ? "..." : s.value}
             </span>
+            <p style={{ color: s.subColor || "var(--text-3)", fontSize: "12px", marginTop: "6px", fontWeight: s.subColor ? 500 : 400 }}>
+              {s.sub}
+            </p>
           </motion.div>
         ))}
       </motion.div>

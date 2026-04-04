@@ -82,6 +82,9 @@ export default function AgentsPage() {
         >
           Register Agent
         </h1>
+        <p style={{ color: "var(--text-3)", fontSize: "14px", marginTop: "4px" }}>
+          Register an AI agent identity on-chain via AgentRegistry (ERC-8004 pattern)
+        </p>
       </div>
 
       {/* Form card */}

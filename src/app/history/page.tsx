@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { VerdictBadge } from "@/components/demos/VerdictBadge";
-import { AgentIdentity } from "@/components/AgentIdentity";
 import { Loader2 } from "lucide-react";
 
 type Verdict = "ALLOW" | "WARN" | "BLOCK";
@@ -20,6 +19,21 @@ interface Assessment {
 
 function shortAddr(addr: string) {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+}
+
+const AGENT_DISPLAY_NAMES: Record<string, string> = {
+  "0x5e07aaf8f2301e08a3aeddad7326c5a2bb54e929": "aegis-agent.eth",
+  "0xd8da6bf26964af9d7eed9e03e53415d37aa96045": "vitalik.eth",
+};
+
+function getAgentDisplay(address: string): { name: string; isEns: boolean } {
+  const lower = address.toLowerCase();
+  for (const [key, name] of Object.entries(AGENT_DISPLAY_NAMES)) {
+    if (lower.startsWith(key.slice(0, 10).toLowerCase())) {
+      return { name, isEns: true };
+    }
+  }
+  return { name: `${address.slice(0, 6)}...${address.slice(-4)}`, isEns: false };
 }
 
 function formatTime(ts: number) {
@@ -77,8 +91,8 @@ export default function HistoryPage() {
         >
           Assessment History
         </h1>
-        <p className="text-sm mt-1" style={{ color: "#52525b" }}>
-          On-chain audit trail from Hedera Testnet
+        <p style={{ color: "var(--text-3)", fontSize: "14px", marginTop: "4px" }}>
+          Immutable audit trail of every agent decision on Hedera Testnet
         </p>
       </div>
 
@@ -133,8 +147,15 @@ export default function HistoryPage() {
                     <td className="px-5 py-3 text-xs font-mono text-right" style={{ color: "#a1a1aa" }}>
                       {row.id}
                     </td>
-                    <td className="px-5 py-3 text-sm font-mono" style={{ color: "#52525b" }}>
-                      <AgentIdentity address={row.agent} />
+                    <td className="px-5 py-3 text-sm">
+                      {(() => {
+                        const display = getAgentDisplay(row.agent);
+                        return display.isEns ? (
+                          <span className="font-medium" style={{ color: "var(--text-1)" }}>{display.name}</span>
+                        ) : (
+                          <span className="font-mono" style={{ color: "var(--text-2)" }}>{display.name}</span>
+                        );
+                      })()}
                     </td>
                     <td className="px-5 py-3 text-sm font-mono" style={{ color: "#52525b" }}>
                       {shortAddr(row.target)}

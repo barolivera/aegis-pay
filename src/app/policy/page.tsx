@@ -59,6 +59,9 @@ export default function PolicyPage() {
         >
           Configure Policy
         </h1>
+        <p style={{ color: "var(--text-3)", fontSize: "14px", marginTop: "4px" }}>
+          Set risk thresholds — agents above BLOCK threshold are denied automatically
+        </p>
       </div>
 
       {/* Policy card */}
