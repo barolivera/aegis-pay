@@ -6,7 +6,99 @@ AegisPay is a trust layer that evaluates risk before an AI agent executes a paym
 
 ---
 
-## How It Works
+## The Problem: AI Agents Need Guardrails
+
+Autonomous AI agents can pay for APIs, tools, and services without human intervention. But what happens when an agent tries to send 150 HBAR to an unknown address? Or interact with a suspicious contract?
+
+**Without AegisPay:** The agent executes blindly — no risk check, no audit trail, no way to stop it.
+
+**With AegisPay:** Every payment goes through a 3-step pipeline:
+
+```
++------------------+     +------------------+     +------------------+
+|  1. RISK ENGINE  | --> |  2. POLICY       | --> |  3. EXECUTION    |
+|                  |     |     MANAGER      |     |                  |
+|  Score 0-100     |     |  ALLOW < 30      |     |  ALLOW: transfer |
+|  based on:       |     |  WARN  30-70     |     |  WARN:  Ledger   |
+|  - amount        |     |  BLOCK > 70      |     |         approval |
+|  - target addr   |     |                  |     |  BLOCK: stopped  |
+|  - reputation    |     |  (on-chain,      |     |                  |
+|  - first contact |     |   configurable)  |     |  All recorded    |
++------------------+     +------------------+     |  on-chain        |
+                                                  +------------------+
+```
+
+Every assessment is recorded on-chain — creating an **immutable audit trail** of what the agent did, why, and whether it was allowed.
+
+---
+
+## AI Agents in AegisPay
+
+### Autonomous Agent (Backend)
+
+The autonomous agent runs as a TypeScript process using **Hedera Agent Kit SDK**. It simulates real-world AI agent behavior:
+
+```
++---------------------------------------------------------------+
+|                    AUTONOMOUS AGENT                            |
+|                                                                |
+|  +-----------+    +----------+    +---------+    +----------+  |
+|  | Mission   |    | Risk     |    | Policy  |    | Hedera   |  |
+|  | Queue     |--->| Engine   |--->| Check   |--->| Agent Kit|  |
+|  |           |    |          |    | (chain) |    | Transfer |  |
+|  | "Pay data |    | score=20 |    | ALLOW   |    | 5 HBAR   |  |
+|  |  provider"|    |          |    |         |    | native   |  |
+|  +-----------+    +----------+    +---------+    +----------+  |
+|                                                                |
+|  Missions:                                                     |
+|  - Pay data feed provider      (low risk,  5 HBAR)            |
+|  - Pay API oracle service      (medium,   20 HBAR)            |
+|  - Pay unknown contractor      (high,    150 HBAR)            |
+|  - Transfer to suspicious addr (blocked, burn addr)            |
+|                                                                |
+|  Tech: Hedera Agent Kit (HederaBuilder.transferHbar)           |
+|        @hashgraph/sdk (ContractCallQuery, ContractExecute)     |
+|        AgentMode.AUTONOMOUS                                    |
++---------------------------------------------------------------+
+```
+
+### Agent Registration (On-Chain)
+
+Every agent must be registered in the **AgentRegistry** contract before it can create assessments. This follows the **ERC-8004 pattern** for on-chain agent identity:
+
+```
++-------------------+         +------------------+
+|  Agent            |         | AgentRegistry    |
+|  0x5e07...e929    | ------> | registerAgent()  |
+|                   |         |                  |
+|  owner: deployer  |         | Stores:          |
+|  metadata: ipfs://|         |  - owner address |
+|  active: true     |         |  - metadata URI  |
+|  registered: block|         |  - active status |
++-------------------+         |  - timestamp     |
+                              +------------------+
+```
+
+### Human-in-the-Loop (Ledger)
+
+When the policy returns **WARN**, the agent **cannot move funds** without human approval. In the frontend, this triggers a Ledger Clear Signing flow:
+
+```
++----------+     +-----------+     +----------+     +----------+
+|  Agent   |     | Policy:   |     | Ledger   |     | Execute  |
+|  wants   | --> | WARN      | --> | Device   | --> | or       |
+|  to pay  |     | (medium   |     | shows tx |     | Cancel   |
+|  20 HBAR |     |  risk)    |     | details  |     |          |
++----------+     +-----------+     | via Clear|     +----------+
+                                   | Signing  |
+                                   +----------+
+```
+
+The Ledger device displays human-readable transaction details (not raw hex) thanks to ERC-7730 Clear Signing JSON files.
+
+---
+
+## How It Works (Detailed Flow)
 
 ```
                     +-----------------------+
