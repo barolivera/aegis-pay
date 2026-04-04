@@ -308,16 +308,13 @@ export default function WorkflowPage() {
 
               {/* Links */}
               <div className="flex flex-wrap gap-3 text-xs">
-                <a
-                  href="https://github.com/mariaelisaaraya/flujoAgente/tree/main/workflow/aegispay"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 font-mono hover:underline"
+                <span
+                  className="flex items-center gap-1.5 font-mono"
                   style={{ color: "#555" }}
                 >
                   <ExternalLink className="w-3 h-3" />
-                  View Workflow Source
-                </a>
+                  workflow/aegispay/
+                </span>
                 <a
                   href="https://docs.chain.link/cre"
                   target="_blank"
