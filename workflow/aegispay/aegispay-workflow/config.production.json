@@ -1,0 +1,13 @@
+{
+	"schedule": "0 */5 * * * *",
+	"priceApiUrl": "https://api.coingecko.com/api/v3/simple/price?ids=hedera-hashgraph&vs_currencies=usd",
+	"riskThresholds": {
+		"lowUsdValue": 500,
+		"highUsdValue": 5000
+	},
+	"policyThresholds": {
+		"low": 25,
+		"medium": 60
+	},
+	"pendingTransactions": []
+}

@@ -1,0 +1,38 @@
+{
+	"schedule": "0 */1 * * * *",
+	"priceApiUrl": "https://api.coingecko.com/api/v3/simple/price?ids=hedera-hashgraph&vs_currencies=usd",
+	"riskThresholds": {
+		"lowUsdValue": 100,
+		"highUsdValue": 1000
+	},
+	"policyThresholds": {
+		"low": 30,
+		"medium": 70
+	},
+	"pendingTransactions": [
+		{
+			"agent": "0x1234567890abcdef1234567890abcdef12345678",
+			"target": "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+			"amountHbar": 50,
+			"action": "transfer"
+		},
+		{
+			"agent": "0x1234567890abcdef1234567890abcdef12345678",
+			"target": "0x9876543210fedcba9876543210fedcba98765432",
+			"amountHbar": 5000,
+			"action": "swap"
+		},
+		{
+			"agent": "0xaaaabbbbccccddddaaaabbbbccccddddaaaabbbb",
+			"target": "0x000000000000000000000000000000000000dead",
+			"amountHbar": 200,
+			"action": "transfer"
+		},
+		{
+			"agent": "0x1234567890abcdef1234567890abcdef12345678",
+			"target": "0x5555666677778888555566667777888855556666",
+			"amountHbar": 2000,
+			"action": "contract-call"
+		}
+	]
+}
