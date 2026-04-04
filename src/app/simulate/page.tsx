@@ -635,7 +635,7 @@ export default function SimulatePage() {
                     transition={{ duration: 0.25 }}
                   >
                     <button
-                      onClick={() => { setResult(null); setOperatorDecision(null); resetRegister(); setForm({ agent: "", target: "", amount: "", action: "transfer" }); }}
+                      onClick={() => { setResult(null); setOperatorDecision(null); resetRegister(); setTraceVisible(false); setTraceSteps([]); setTraceProgress(-1); setForm({ agent: "", target: "", amount: "", action: "transfer" }); }}
                       className="flex h-10 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors"
                       style={{ backgroundColor: "#f7f7f8", color: "#52525b", border: "1px solid #ebebed" }}
                       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#efefff")}
