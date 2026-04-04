@@ -164,6 +164,17 @@ When PolicyManager returns **WARN**, the agent cannot move funds without human a
 
 ---
 
+## ENS Integration
+
+AI agents need persistent, human-readable identities. AegisPay resolves ENS names and avatars for connected wallets:
+
+- **`useEnsName`** + **`useEnsAvatar`** from wagmi, resolving against Ethereum mainnet
+- Sidebar shows ENS name + avatar instead of raw `0x...` addresses
+- Falls back to short address if no ENS name is registered
+- Enhances agent operator identity and discoverability in the UI
+
+---
+
 ## Contracts
 
 ### Original (Hedera Testnet)
@@ -257,6 +268,7 @@ cre workflow simulate ./aegispay-workflow -T staging-settings --non-interactive 
 | Agent | TypeScript, viem, Hedera Agent Kit |
 | Chainlink | CRE SDK (`@chainlink/cre-sdk`), AggregatorV3Interface, Price Feeds |
 | Ledger | Wallet Provider (EIP-6963), ERC-7730 Clear Signing |
+| ENS | Name + avatar resolution via wagmi (useEnsName, useEnsAvatar) |
 | Chain | Hedera Testnet (296) |
 
 ---
@@ -284,6 +296,12 @@ cre workflow simulate ./aegispay-workflow -T staging-settings --non-interactive 
 - `getVerdictWithPrice()` adjusts risk based on real USD value
 - State change: `PriceAwareVerdict` event emitted
 - 8 tests with MockPriceFeed, 23 total passing
+
+### ENS — Best ENS Integration for AI Agents ($5,000)
+- ENS name + avatar resolution for agent operators in the UI
+- `useEnsName` + `useEnsAvatar` via wagmi resolving against Ethereum mainnet
+- Enhances agent identity and discoverability — not cosmetic, agents need human-readable names
+- No hardcoded values — resolves dynamically for any connected wallet
 
 ---
 
