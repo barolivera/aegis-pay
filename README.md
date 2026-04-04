@@ -37,35 +37,69 @@ Autonomous AI agents can pay for APIs, tools, and services without human interve
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        FRONTEND                              │
-│                   Next.js 14 + wagmi + viem                  │
-│                                                              │
-│   Dashboard · Simulate · Agents · Policy · History · CRE     │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ JSON-RPC
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   HEDERA TESTNET (Chain 296)                  │
-│                                                              │
-│   AgentRegistry     PolicyManager      AssessmentRegistry    │
-│   0xe059...0991     0x226F...Fcc6c     0xeA86...d3638       │
-│                                                              │
-│   PolicyManager v2 (Chainlink)   MockPriceFeed               │
-│   0xc5b0...8b7a                  0x1bd8...59d4               │
-└──────────────────────────┬──────────────────────────────────┘
-                           │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-      ┌──────────┐  ┌──────────┐  ┌──────────────┐
-      │ Agent    │  │ Ledger   │  │ Chainlink    │
-      │ (TS)    │  │ Device   │  │ CRE Workflow │
-      │          │  │          │  │              │
-      │ Picks    │  │ Human    │  │ DON runs     │
-      │ missions │  │ approval │  │ risk scoring │
-      │ scores   │  │ for WARN │  │ with price   │
-      │ executes │  │ verdicts │  │ consensus    │
-      └──────────┘  └──────────┘  └──────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│  FRONTEND  (Next.js 14 + wagmi + viem)                           │
+│                                                                   │
+│  /dashboard    /simulate    /agents    /policy    /history        │
+│  live stats    risk assess  register   set rules  audit trail     │
+│                                                                   │
+│  /workflow  ←── Chainlink CRE integration page                    │
+│  run DON        shows on-chain price + verdicts                   │
+│  simulation     reads from PolicyManager v2                       │
+└───────────┬───────────────────────────────────────┬──────────────┘
+            │                                       │
+            │  wagmi / JSON-RPC                     │  fetch /api/cre-simulate
+            ▼                                       ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  HEDERA TESTNET  (Chain 296)                                      │
+│                                                                   │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────────┐  │
+│  │ AgentRegistry   │  │ PolicyManager   │  │ AssessmentRegistry│  │
+│  │                 │  │                 │  │                  │  │
+│  │ registerAgent() │  │ getVerdict()    │  │ createAssessment()│  │
+│  │ toggleAgent()   │  │ setPolicy()     │  │ getAssessment()  │  │
+│  │ ERC-8004 pattern│  │ getThresholds() │  │ audit trail      │  │
+│  └─────────────────┘  └─────────────────┘  └──────────────────┘  │
+│                                                                   │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │ PolicyManager v2              MockPriceFeed              │    │
+│  │ (Chainlink integration)       (AggregatorV3Interface)    │    │
+│  │                                                          │    │
+│  │ getVerdictWithPrice()  ◄────  latestRoundData()          │    │
+│  │ reads price on-chain          returns HBAR/USD           │    │
+│  │ adjusts risk score            $0.087 (8 decimals)        │    │
+│  │ emits PriceAwareVerdict                                  │    │
+│  └──────────────────────────────────────────────────────────┘    │
+└───────┬──────────────────────────────────┬───────────────────────┘
+        │                                  │
+        ▼                                  ▼
+┌────────────────────┐          ┌─────────────────────────────────┐
+│  AUTONOMOUS AGENT  │          │  CHAINLINK CRE WORKFLOW         │
+│  (TypeScript)      │          │  (Decentralized Oracle Network) │
+│                    │          │                                  │
+│  1. Pick mission   │          │  1. Cron trigger (every 1 min)  │
+│  2. Compute risk   │          │  2. HTTP: fetch HBAR/USD price  │
+│  3. Query policy   │──────┐   │  3. DON consensus on price      │
+│  4. Execute or     │      │   │  4. Score each pending TX       │
+│     wait for       │      │   │  5. Return ALLOW/WARN/BLOCK     │
+│     human approval │      │   │                                  │
+│  5. Record on-chain│      │   │  SDK: @chainlink/cre-sdk        │
+└────────────────────┘      │   │  CLI: cre workflow simulate     │
+                            │   └─────────────────────────────────┘
+                            ▼
+                  ┌──────────────────┐
+                  │  LEDGER DEVICE   │
+                  │                  │
+                  │  WARN verdicts   │
+                  │  require human   │
+                  │  approval on     │
+                  │  hardware device │
+                  │                  │
+                  │  ERC-7730 Clear  │
+                  │  Signing shows   │
+                  │  readable tx     │
+                  │  details         │
+                  └──────────────────┘
 ```
 
 ---
