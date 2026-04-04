@@ -111,13 +111,40 @@ Si, si la address conectada tiene un ENS name registrado en mainnet, se resuelve
 ## Ledger
 
 **¿Cómo integran Ledger?**
-Cuando el verdict es WARN (riesgo medio), el agente no puede mover fondos. Se muestra un modal en el frontend que requiere aprobacion humana. Si el usuario tiene un Ledger conectado, la transaccion se firma en el hardware device.
+Cuando el verdict es WARN (riesgo medio), el agente no puede mover fondos. Se muestra un modal en el frontend "Human Approval Required — Ledger Secure Flow" que requiere aprobacion humana. Si el usuario tiene un Ledger conectado, la transaccion se firma en el hardware device.
 
-**¿Qué es Clear Signing?**
-Es ERC-7730. En vez de mostrar datos hexadecimales en la pantalla del Ledger, mostramos informacion legible: "Register AI Agent", "Risk Score: 45/100", "Transfer 20 HBAR to 0x1234...". Tenemos JSON files para los 3 contratos.
+El flujo completo:
+1. Agente quiere hacer un pago (ej: swap 50 HBAR)
+2. Risk engine calcula score = 40 → WARN
+3. Aparece modal con detalles: target, amount, action, risk score
+4. El operador aprueba → la tx va al Ledger device
+5. Ledger muestra Clear Signing (datos legibles, no hex)
+6. Operador confirma en el device → assessment registrado on-chain
+7. Si rechaza → transaccion cancelada, assessment igual se registra como rechazado
+
+**¿Qué es Clear Signing / ERC-7730?**
+Es un estandar para que el Ledger device muestre informacion legible en vez de datos hexadecimales. Tenemos 3 JSON files (uno por contrato) que mapean cada funcion a labels humanos:
+
+| Contrato | Funciones | Lo que muestra el Ledger |
+|----------|-----------|--------------------------|
+| AgentRegistry | `registerAgent` | "Register AI Agent" + address + metadata URI |
+| AgentRegistry | `toggleAgent` | "Toggle Agent Status" + active/inactive |
+| PolicyManager | `setPolicy` | "Update Risk Policy" + low threshold + high threshold |
+| AssessmentRegistry | `createAssessment` | "Record Assessment" + agent + target + Risk Score (0-100) + verdict |
+
+Los archivos estan en `src/clear-signing/` y siguen el schema oficial `erc7730-v1.schema.json`.
 
 **¿Por qué Ledger como trust layer?**
-Porque el agente AI corre autonomo. Si algo tiene riesgo medio, necesitas un humano que valide. Y un humano firmando en un hardware wallet es el nivel mas alto de seguridad — las keys nunca salen del dispositivo.
+Porque el agente AI corre autonomo. Si algo tiene riesgo medio, necesitas un humano que valide. Y un humano firmando en un hardware wallet es el nivel mas alto de seguridad — las keys nunca salen del dispositivo. Es la diferencia entre "un popup de MetaMask que cualquier script puede aceptar" vs "un boton fisico que un humano tiene que apretar".
+
+**¿Cómo detectan si es Ledger o MetaMask?**
+Usamos `useConnectorClient` de wagmi. Si el transport es "Ledger" o el account source es "ledger", la UI cambia: el boton dice "Sign on Ledger device..." en vez de "Confirm in wallet..." y se activa el flujo de Clear Signing.
+
+**¿Cómo se conecta un Ledger al frontend?**
+Usamos `@ledgerhq/ledger-wallet-provider` via EIP-6963. Cuando Ledger Live esta abierto y el Ledger esta conectado por USB con la app Ethereum abierta, wagmi lo auto-detecta como wallet disponible. No hace falta configuracion extra.
+
+**¿Se puede probar ahora con un Ledger?**
+Si. Abrir Ledger Live → conectar device por USB → abrir app Ethereum → ir a la web → Connect Wallet (deberia aparecer Ledger como opcion) → ir a Simulate → hacer un caso WARN → el modal aparece → Approve → el Ledger device muestra los Clear Signing details → confirmar en el device.
 
 ---
 
