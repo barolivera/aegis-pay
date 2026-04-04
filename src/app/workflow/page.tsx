@@ -308,13 +308,6 @@ export default function WorkflowPage() {
 
               {/* Links */}
               <div className="flex flex-wrap gap-3 text-xs">
-                <span
-                  className="flex items-center gap-1.5 font-mono"
-                  style={{ color: "#555" }}
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  workflow/aegispay/
-                </span>
                 <a
                   href="https://docs.chain.link/cre"
                   target="_blank"
