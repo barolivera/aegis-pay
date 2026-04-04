@@ -13,7 +13,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { useAccount, useConnect, useEnsName, useEnsAvatar } from "wagmi";
+import { useAccount, useConnect, useDisconnect, useEnsName, useEnsAvatar } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { cn } from "@/lib/utils";
 
@@ -44,35 +44,47 @@ function RadarIcon({ className }: { className?: string }) {
 function WalletSection() {
   const { address, isConnected } = useAccount();
   const { connect } = useConnect();
+  const { disconnect } = useDisconnect();
   const { data: ensName } = useEnsName({ address, chainId: 1 });
   const { data: ensAvatar } = useEnsAvatar({ name: ensName ?? undefined, chainId: 1 });
 
   if (isConnected && address) {
     return (
-      <div
-        className="flex items-center gap-2 px-3 py-2 rounded-lg"
-        style={{ backgroundColor: "#f7f7f8", border: "1px solid #ebebed" }}
-      >
-        {ensAvatar ? (
-          <img src={ensAvatar} alt="" className="h-6 w-6 rounded-full shrink-0" />
-        ) : (
-          <span className="block h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: "#15803d" }} />
-        )}
-        <div className="flex flex-col">
-          {ensName && (
-            <span className="text-[12px] font-medium" style={{ color: "#0f0f10" }}>{ensName}</span>
+      <div className="space-y-2">
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded-lg"
+          style={{ backgroundColor: "#f7f7f8", border: "1px solid #ebebed" }}
+        >
+          {ensAvatar ? (
+            <img src={ensAvatar} alt="" className="h-6 w-6 rounded-full shrink-0" />
+          ) : (
+            <span className="block h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: "#15803d" }} />
           )}
-          <span className="font-mono text-[11px]" style={{ color: "#a1a1aa" }}>
-            {shortAddress(address)}
-          </span>
+          <div className="flex flex-col">
+            {ensName && (
+              <span className="text-[12px] font-medium" style={{ color: "#0f0f10" }}>{ensName}</span>
+            )}
+            <span className="font-mono text-[11px]" style={{ color: "#a1a1aa" }}>
+              {shortAddress(address)}
+            </span>
+          </div>
         </div>
+        <button
+          onClick={() => disconnect()}
+          className="w-full text-[11px] py-1.5 rounded-md transition-colors"
+          style={{ color: "#a1a1aa", border: "1px solid #ebebed" }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "#dc2626"; e.currentTarget.style.borderColor = "#fecaca"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = "#a1a1aa"; e.currentTarget.style.borderColor = "#ebebed"; }}
+        >
+          Disconnect
+        </button>
       </div>
     );
   }
 
   return (
     <button
-      onClick={() => connect({ connector: injected() })}
+      onClick={() => { try { connect({ connector: injected() }); } catch { /* no wallet */ } }}
       className="inline-flex w-full items-center justify-center h-9 rounded-md text-xs font-medium text-white transition-colors"
       style={{ backgroundColor: "#5b5cf6" }}
       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#4f46e5")}
