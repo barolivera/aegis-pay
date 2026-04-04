@@ -58,7 +58,7 @@ export default function HomePage() {
   const cards = [
     { label: "REGISTERED AGENTS", value: stats.agentCount, icon: Bot, sub: "active on Hedera Testnet" },
     { label: "TOTAL ASSESSMENTS", value: stats.total, icon: null, sub: "risk evaluations recorded on-chain" },
-    { label: "BLOCKED ACTIONS", value: stats.blocked, icon: ShieldOff, sub: "transactions prevented" },
+    { label: "BLOCKED ACTIONS", value: stats.blocked, icon: ShieldOff, sub: "transactions prevented", subColor: "#dc2626" },
     { label: "AVG RISK SCORE", value: stats.avgScore, icon: Activity, sub: "across all assessments" },
   ];
 
