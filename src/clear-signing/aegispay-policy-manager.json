@@ -1,0 +1,52 @@
+{
+  "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v1.schema.json",
+  "context": {
+    "contract": {
+      "abi": [
+        {
+          "type": "function",
+          "name": "setPolicy",
+          "inputs": [
+            { "name": "_lowThreshold", "type": "uint256" },
+            { "name": "_mediumThreshold", "type": "uint256" }
+          ],
+          "outputs": [],
+          "stateMutability": "nonpayable"
+        }
+      ],
+      "deployments": [
+        {
+          "chainId": 296,
+          "address": "0x226F68C0D8F26A478F4F64d2733376DAB98Fcc6c"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "AegisPay",
+    "info": {
+      "legalName": "AegisPay",
+      "url": "https://github.com/mariaelisaaraya/flujoAgente"
+    }
+  },
+  "display": {
+    "formats": {
+      "setPolicy(uint256,uint256)": {
+        "intent": "Update Risk Policy Thresholds",
+        "fields": [
+          {
+            "path": "_lowThreshold",
+            "label": "ALLOW below (risk score)",
+            "format": "raw"
+          },
+          {
+            "path": "_mediumThreshold",
+            "label": "BLOCK above (risk score)",
+            "format": "raw"
+          }
+        ],
+        "required": ["_lowThreshold", "_mediumThreshold"]
+      }
+    }
+  }
+}

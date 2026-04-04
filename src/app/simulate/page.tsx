@@ -14,8 +14,9 @@ import {
   Loader2,
   ExternalLink,
 } from "lucide-react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useConnectorClient } from "wagmi";
 import { ADDRESSES, assessmentRegistryAbi } from "@/lib/contracts";
+import { hederaTestnet } from "@/lib/wagmi";
 
 type Verdict = "ALLOW" | "WARN" | "BLOCK";
 
@@ -86,6 +87,10 @@ export default function SimulatePage() {
       .catch(() => {});
   }, []);
 
+  const { data: connectorClient } = useConnectorClient({ chainId: hederaTestnet.id });
+  const isLedger = connectorClient?.transport?.name === "Ledger" ||
+    connectorClient?.account?.source === "ledger";
+
   const { writeContract, isPending: isWritePending, data: writeTxHash } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: writeTxHash });
 
@@ -128,6 +133,10 @@ export default function SimulatePage() {
   function handleApproval(decision: "approved" | "rejected") {
     setShowModal(false);
     setOperatorDecision(decision);
+    // When approved, immediately submit the on-chain assessment via Ledger Clear Signing
+    if (decision === "approved" && result) {
+      handleRegister();
+    }
   }
 
   const canRegister = result && ((result.verdict === "ALLOW") || (result.verdict === "WARN" && operatorDecision === "approved"));
@@ -233,7 +242,7 @@ export default function SimulatePage() {
               {showRegisterButton && (
                 <div className="mt-4">
                   <button onClick={handleRegister} disabled={isWritePending || isConfirming} className="flex h-10 w-full items-center justify-center gap-2 rounded-md text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50" style={{ backgroundColor: "#2563EB" }}>
-                    {isWritePending ? (<><Loader2 className="w-4 h-4 animate-spin" />Confirm in wallet…</>) : isConfirming ? (<><Loader2 className="w-4 h-4 animate-spin" />Confirming on Hedera…</>) : "Register Assessment on Hedera"}
+                    {isWritePending ? (<><Loader2 className="w-4 h-4 animate-spin" />{isLedger ? "Sign on Ledger device…" : "Confirm in wallet…"}</>) : isConfirming ? (<><Loader2 className="w-4 h-4 animate-spin" />Confirming on Hedera…</>) : "Register Assessment on Hedera"}
                   </button>
                 </div>
               )}
@@ -325,7 +334,9 @@ export default function SimulatePage() {
                 </div>
 
                 <p className="text-center text-xs mt-5" style={{ color: "#333" }}>
-                  In production, this approval would require a physical Ledger device for Clear Signing
+                  {isLedger
+                    ? "Your Ledger device will display Clear Signing details for this transaction"
+                    : "Connect a Ledger device for hardware-secured Clear Signing approval"}
                 </p>
               </motion.div>
             </motion.div>

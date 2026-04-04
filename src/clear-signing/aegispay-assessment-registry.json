@@ -1,0 +1,70 @@
+{
+  "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v1.schema.json",
+  "context": {
+    "contract": {
+      "abi": [
+        {
+          "type": "function",
+          "name": "createAssessment",
+          "inputs": [
+            { "name": "agent", "type": "address" },
+            { "name": "target", "type": "address" },
+            { "name": "riskScore", "type": "uint256" },
+            { "name": "verdict", "type": "string" },
+            { "name": "reason", "type": "string" }
+          ],
+          "outputs": [{ "name": "", "type": "uint256" }],
+          "stateMutability": "nonpayable"
+        }
+      ],
+      "deployments": [
+        {
+          "chainId": 296,
+          "address": "0xeA86E74c8c89a30F6180B4d5c3d9C58C981d3638"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "AegisPay",
+    "info": {
+      "legalName": "AegisPay",
+      "url": "https://github.com/mariaelisaaraya/flujoAgente"
+    }
+  },
+  "display": {
+    "formats": {
+      "createAssessment(address,address,uint256,string,string)": {
+        "intent": "Record Risk Assessment",
+        "fields": [
+          {
+            "path": "agent",
+            "label": "AI Agent",
+            "format": "addressOrName"
+          },
+          {
+            "path": "target",
+            "label": "Transaction Target",
+            "format": "addressOrName"
+          },
+          {
+            "path": "riskScore",
+            "label": "Risk Score (0-100)",
+            "format": "raw"
+          },
+          {
+            "path": "verdict",
+            "label": "Verdict",
+            "format": "raw"
+          },
+          {
+            "path": "reason",
+            "label": "Reason",
+            "format": "raw"
+          }
+        ],
+        "required": ["agent", "target", "riskScore", "verdict", "reason"]
+      }
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v1.schema.json",
+  "context": {
+    "contract": {
+      "abi": [
+        {
+          "type": "function",
+          "name": "registerAgent",
+          "inputs": [
+            { "name": "agent", "type": "address" },
+            { "name": "metadataURI", "type": "string" }
+          ],
+          "outputs": [],
+          "stateMutability": "nonpayable"
+        },
+        {
+          "type": "function",
+          "name": "toggleAgent",
+          "inputs": [
+            { "name": "agent", "type": "address" },
+            { "name": "active", "type": "bool" }
+          ],
+          "outputs": [],
+          "stateMutability": "nonpayable"
+        }
+      ],
+      "deployments": [
+        {
+          "chainId": 296,
+          "address": "0xe0595502b10398D7702Ed43eDcf8101Fd67c0991"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "AegisPay",
+    "info": {
+      "legalName": "AegisPay",
+      "url": "https://github.com/mariaelisaaraya/flujoAgente"
+    }
+  },
+  "display": {
+    "formats": {
+      "registerAgent(address,string)": {
+        "intent": "Register AI Agent",
+        "fields": [
+          {
+            "path": "agent",
+            "label": "Agent Address",
+            "format": "addressOrName"
+          },
+          {
+            "path": "metadataURI",
+            "label": "Metadata URI",
+            "format": "raw"
+          }
+        ],
+        "required": ["agent", "metadataURI"]
+      },
+      "toggleAgent(address,bool)": {
+        "intent": "Toggle Agent Status",
+        "fields": [
+          {
+            "path": "agent",
+            "label": "Agent Address",
+            "format": "addressOrName"
+          },
+          {
+            "path": "active",
+            "label": "Set Active",
+            "format": "raw"
+          }
+        ],
+        "required": ["agent", "active"]
+      }
+    }
+  }
+}
