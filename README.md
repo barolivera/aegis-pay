@@ -1,12 +1,18 @@
 # AegisPay — Trust Layer for Autonomous AI Agents
 
-> **ETHGlobal Cannes 2026** | Bounties: **Hedera AI Agents** + **Ledger AI Agents x Clear Signing**
-
-AegisPay is a trust layer that evaluates risk before an AI agent executes a payment on **Hedera**. It scores the transaction, applies a configurable policy (ALLOW / WARN / BLOCK), and records every assessment on-chain as an immutable audit trail. **Ledger** acts as the hardware trust layer for human-in-the-loop approval on medium-risk transactions.
+> **ETHGlobal Cannes 2026** | AI Agents + DeFi + On-Chain Risk Assessment
 
 ---
 
-## The Problem: AI Agents Need Guardrails
+## Overview
+
+AegisPay is a **trust layer** that evaluates risk before an AI agent executes a payment. It scores the transaction, applies a configurable policy (**ALLOW / WARN / BLOCK**), and records every assessment on-chain as an immutable audit trail.
+
+When risk is medium, **Ledger** acts as the hardware trust layer for human-in-the-loop approval. When the assessment needs to be decentralized, **Chainlink CRE** runs it on a DON with fault-tolerant consensus.
+
+---
+
+## The Problem
 
 Autonomous AI agents can pay for APIs, tools, and services without human intervention. But what happens when an agent tries to send 150 HBAR to an unknown address? Or interact with a suspicious contract?
 
@@ -15,153 +21,15 @@ Autonomous AI agents can pay for APIs, tools, and services without human interve
 **With AegisPay:** Every payment goes through a 3-step pipeline:
 
 ```
-+------------------+     +------------------+     +------------------+
-|  1. RISK ENGINE  | --> |  2. POLICY       | --> |  3. EXECUTION    |
-|                  |     |     MANAGER      |     |                  |
-|  Score 0-100     |     |  ALLOW < 30      |     |  ALLOW: transfer |
-|  based on:       |     |  WARN  30-70     |     |  WARN:  Ledger   |
-|  - amount        |     |  BLOCK > 70      |     |         approval |
-|  - target addr   |     |                  |     |  BLOCK: stopped  |
-|  - reputation    |     |  (on-chain,      |     |                  |
-|  - first contact |     |   configurable)  |     |  All recorded    |
-+------------------+     +------------------+     |  on-chain        |
-                                                  +------------------+
-```
-
-Every assessment is recorded on-chain — creating an **immutable audit trail** of what the agent did, why, and whether it was allowed.
-
----
-
-## AI Agents in AegisPay
-
-### Autonomous Agent (Backend)
-
-The autonomous agent runs as a TypeScript process using **Hedera Agent Kit SDK**. It simulates real-world AI agent behavior:
-
-```
-+---------------------------------------------------------------+
-|                    AUTONOMOUS AGENT                            |
-|                                                                |
-|  +-----------+    +----------+    +---------+    +----------+  |
-|  | Mission   |    | Risk     |    | Policy  |    | Hedera   |  |
-|  | Queue     |--->| Engine   |--->| Check   |--->| Agent Kit|  |
-|  |           |    |          |    | (chain) |    | Transfer |  |
-|  | "Pay data |    | score=20 |    | ALLOW   |    | 5 HBAR   |  |
-|  |  provider"|    |          |    |         |    | native   |  |
-|  +-----------+    +----------+    +---------+    +----------+  |
-|                                                                |
-|  Missions:                                                     |
-|  - Pay data feed provider      (low risk,  5 HBAR)            |
-|  - Pay API oracle service      (medium,   20 HBAR)            |
-|  - Pay unknown contractor      (high,    150 HBAR)            |
-|  - Transfer to suspicious addr (blocked, burn addr)            |
-|                                                                |
-|  Tech: Hedera Agent Kit (HederaBuilder.transferHbar)           |
-|        @hashgraph/sdk (ContractCallQuery, ContractExecute)     |
-|        AgentMode.AUTONOMOUS                                    |
-+---------------------------------------------------------------+
-```
-
-### Agent Registration (On-Chain)
-
-Every agent must be registered in the **AgentRegistry** contract before it can create assessments. This follows the **ERC-8004 pattern** for on-chain agent identity:
-
-```
-+-------------------+         +------------------+
-|  Agent            |         | AgentRegistry    |
-|  0x5e07...e929    | ------> | registerAgent()  |
-|                   |         |                  |
-|  owner: deployer  |         | Stores:          |
-|  metadata: ipfs://|         |  - owner address |
-|  active: true     |         |  - metadata URI  |
-|  registered: block|         |  - active status |
-+-------------------+         |  - timestamp     |
-                              +------------------+
-```
-
-### Human-in-the-Loop (Ledger)
-
-When the policy returns **WARN**, the agent **cannot move funds** without human approval. In the frontend, this triggers a Ledger Clear Signing flow:
-
-```
-+----------+     +-----------+     +----------+     +----------+
-|  Agent   |     | Policy:   |     | Ledger   |     | Execute  |
-|  wants   | --> | WARN      | --> | Device   | --> | or       |
-|  to pay  |     | (medium   |     | shows tx |     | Cancel   |
-|  20 HBAR |     |  risk)    |     | details  |     |          |
-+----------+     +-----------+     | via Clear|     +----------+
-                                   | Signing  |
-                                   +----------+
-```
-
-The Ledger device displays human-readable transaction details (not raw hex) thanks to ERC-7730 Clear Signing JSON files.
-
----
-
-## How It Works (Detailed Flow)
-
-```
-                    +-----------------------+
-                    |    AI Agent picks a   |
-                    |    payment mission    |
-                    +-----------+-----------+
-                                |
-                                v
-                    +-----------+-----------+
-                    |   Register agent in   |
-                    |   AgentRegistry       |
-                    |   (once, on-chain)    |
-                    +-----------+-----------+
-                                |
-                                v
-                    +-----------+-----------+
-                    |   Compute risk score  |
-                    |   amount + address +  |
-                    |   first interaction   |
-                    +-----------+-----------+
-                                |
-                                v
-                    +-----------+-----------+
-                    |   PolicyManager       |
-                    |   getVerdict(score)   |
-                    +-----------+-----------+
-                                |
-              +-----------------+-----------------+
-              |                 |                 |
-              v                 v                 v
-        +-----+-----+    +-----+-----+    +-----+-----+
-        |   ALLOW   |    |   WARN    |    |   BLOCK   |
-        |  score<30 |    | 30<=s<70  |    |  score>=70|
-        +-----+-----+    +-----+-----+    +-----+-----+
-              |                 |                 |
-              v                 v                 |
-        +-----+-----+    +-----+-----+           |
-        |  Execute   |    |  Ledger   |           |
-        |   HBAR     |    |  Human    |           |
-        | transfer   |    | Approval  |           |
-        | (Agent Kit)|    |  Required |           |
-        +-----+-----+    +-----+-----+           |
-              |                 |                 |
-              |           +-----+-----+           |
-              |           | Approve?  |           |
-              |           +-----+-----+           |
-              |            /         \            |
-              |           v           v           |
-              |     +-----+--+  +----+----+      |
-              |     |Transfer|  | Cancel  |      |
-              |     | (sign  |  |         |      |
-              |     | on     |  |         |      |
-              |     | Ledger)|  |         |      |
-              |     +-----+--+  +----+----+      |
-              |           |           |           |
-              +--------+--+-----------+-----------+
-                       |
-                       v
-              +--------+--------+
-              | Record assessment|
-              | on-chain (always)|
-              | AssessmentRegistry|
-              +-----------------+
+  Risk Engine          Policy Manager         Execution
+ ┌────────────┐      ┌────────────────┐      ┌──────────────┐
+ │ Score 0-100│ ──── │ ALLOW  < 30    │ ──── │ ALLOW: send  │
+ │            │      │ WARN   30-69   │      │ WARN: Ledger │
+ │ - amount   │      │ BLOCK  >= 70   │      │ BLOCK: stop  │
+ │ - address  │      │                │      │              │
+ │ - price USD│      │ Chainlink feed │      │ All recorded │
+ │ - action   │      │ on-chain       │      │ on-chain     │
+ └────────────┘      └────────────────┘      └──────────────┘
 ```
 
 ---
@@ -169,105 +37,102 @@ The Ledger device displays human-readable transaction details (not raw hex) than
 ## Architecture
 
 ```
-+------------------------------------------------------------------+
-|                         FRONTEND                                  |
-|                      Next.js 14 + wagmi + viem                    |
-|                                                                   |
-|  +------------+ +----------+ +---------+ +--------+ +---------+  |
-|  | Dashboard  | | Simulate | | Agents  | | Policy | | History |  |
-|  | live stats | | risk     | | register| | set    | | audit   |  |
-|  | from chain | | assess   | | on-chain| | rules  | | trail   |  |
-|  +------+-----+ +----+-----+ +----+----+ +---+----+ +----+----+  |
-|         |             |            |          |           |        |
-+---------+-------------+------------+----------+-----------+-------+
-          |             |            |          |           |
-          v             v            v          v           v
-+------------------------------------------------------------------+
-|                    API ROUTES (server-side)                        |
-|                                                                   |
-|  /api/stats -----> AgentRegistry + AssessmentRegistry             |
-|  /api/verdict ---> PolicyManager.getVerdict()                     |
-|  /api/thresholds > PolicyManager.getThresholds()                  |
-|  /api/assessments> AssessmentRegistry (recent list)               |
-+----------------------------------+-------------------------------+
-                                   |
-                                   | JSON-RPC
-                                   v
-+------------------------------------------------------------------+
-|                  HEDERA TESTNET (Chain 296)                        |
-|                                                                   |
-|  +------------------+  +----------------+  +-------------------+  |
-|  | AgentRegistry    |  | PolicyManager  |  | AssessmentRegistry|  |
-|  | 0xe059...c0991   |  | 0x226F...Fcc6c |  | 0xeA86...d3638   |  |
-|  |                  |  |                |  |                   |  |
-|  | registerAgent()  |  | getVerdict()   |  | createAssessment()|  |
-|  | toggleAgent()    |  | setPolicy()    |  | getAssessment()   |  |
-|  | getAgent()       |  | getThresholds()|  | totalAssessments()|  |
-|  +------------------+  +----------------+  +-------------------+  |
-+------------------------------------------------------------------+
-          ^                                            ^
-          |                                            |
-+---------+--------------------------------------------+-----------+
-|                  AUTONOMOUS AGENT                                 |
-|               TypeScript + Hedera Agent Kit                       |
-|                                                                   |
-|  +-------------+  +-----------+  +------------+  +------------+  |
-|  | Mission     |  | Risk      |  | Policy     |  | Transfer   |  |
-|  | Queue       |->| Engine    |->| Verdict    |->| via Agent  |  |
-|  | (random     |  | score     |  | on-chain   |  | Kit SDK    |  |
-|  |  pick)      |  | 0-100     |  | query      |  | (native    |  |
-|  +-------------+  +-----------+  +------------+  |  HBAR)     |  |
-|                                                   +-----+------+  |
-|                                                         |         |
-|  +------------------------------------------------------+------+  |
-|  | Record assessment on-chain (always)                         |  |
-|  | agent + target + score + verdict + reason + timestamp       |  |
-|  +-------------------------------------------------------------+  |
-+------------------------------------------------------------------+
-
-+------------------------------------------------------------------+
-|                    LEDGER INTEGRATION                              |
-|                                                                   |
-|  +-------------------+    +----------------------------------+    |
-|  | Wallet Provider   |    | ERC-7730 Clear Signing JSON      |    |
-|  | (EIP-6963)        |    |                                  |    |
-|  |                   |    | aegispay-agent-registry.json     |    |
-|  | Auto-discovered   |    |   registerAgent, toggleAgent     |    |
-|  | by wagmi v2       |    |                                  |    |
-|  |                   |    | aegispay-policy-manager.json     |    |
-|  | Human-in-the-loop |    |   setPolicy                     |    |
-|  | for WARN verdicts |    |                                  |    |
-|  |                   |    | aegispay-assessment-registry.json|    |
-|  | Hardware-signed   |    |   createAssessment               |    |
-|  | Clear Signing     |    |                                  |    |
-|  +-------------------+    +----------------------------------+    |
-+------------------------------------------------------------------+
+┌─────────────────────────────────────────────────────────────┐
+│                        FRONTEND                              │
+│                   Next.js 14 + wagmi + viem                  │
+│                                                              │
+│   Dashboard · Simulate · Agents · Policy · History · CRE     │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ JSON-RPC
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   HEDERA TESTNET (Chain 296)                  │
+│                                                              │
+│   AgentRegistry     PolicyManager      AssessmentRegistry    │
+│   0xe059...0991     0x226F...Fcc6c     0xeA86...d3638       │
+│                                                              │
+│   PolicyManager v2 (Chainlink)   MockPriceFeed               │
+│   0xc5b0...8b7a                  0x1bd8...59d4               │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+      ┌──────────┐  ┌──────────┐  ┌──────────────┐
+      │ Agent    │  │ Ledger   │  │ Chainlink    │
+      │ (TS)    │  │ Device   │  │ CRE Workflow │
+      │          │  │          │  │              │
+      │ Picks    │  │ Human    │  │ DON runs     │
+      │ missions │  │ approval │  │ risk scoring │
+      │ scores   │  │ for WARN │  │ with price   │
+      │ executes │  │ verdicts │  │ consensus    │
+      └──────────┘  └──────────┘  └──────────────┘
 ```
 
 ---
 
-## Bounty Qualification
+## Chainlink Integration
 
-### Hedera — AI on Hedera ($2,000)
-- **Hedera Agent Kit SDK** (`hedera-agent-kit@3.8.2`) for native HBAR transfers via `HederaBuilder.transferHbar()` + `handleTransaction()` with `AgentMode.AUTONOMOUS`
-- **Smart Contracts** on Hedera EVM: AgentRegistry, PolicyManager, AssessmentRegistry
-- **@hashgraph/sdk** for `ContractCallQuery` / `ContractExecuteTransaction`
-- Verified contracts on HashScan
+### CRE Workflow — Decentralized Risk Assessment
 
-### Ledger — AI Agents x Ledger ($6,000)
-- **Human-in-the-loop**: WARN verdicts require human approval before funds move
-- **Ledger Wallet Provider** (`@ledgerhq/ledger-wallet-provider@1.1.1`) via EIP-6963, auto-discovered by wagmi v2
-- **ERC-7730 Clear Signing JSON** for all 3 contracts — human-readable tx details on Ledger device
-- Ledger as the trust layer between autonomous AI agents and on-chain execution
+A CRE workflow that runs on a **Chainlink Decentralized Oracle Network (DON)** for fault-tolerant risk assessment.
 
-### Ledger — Clear Signing & Integrations ($4,000)
-- 3 ERC-7730 JSON files mapping every write function to human-readable labels
-- Labels: "Register AI Agent", "Record Risk Assessment", "Risk Score (0-100)", "Update Risk Policy Thresholds"
-- Schema-compliant: `https://eips.ethereum.org/assets/eip-7730/erc7730-v1.schema.json`
+```
+Cron Trigger ── HTTP: HBAR/USD Price ── Risk Scoring ── Verdict
+                (DON consensus)         (same logic)     ALLOW/WARN/BLOCK
+```
+
+**What it does:**
+- Fetches live HBAR/USD price from CoinGecko via HTTP capability
+- Multiple DON nodes reach consensus on the price (`consensusIdenticalAggregation`)
+- Scores each pending AI agent transaction using AegisPay's risk engine
+- Returns structured assessment report
+
+**Simulation output:**
+```
+[OK] TX #1: transfer 50 HBAR ($4.36)    → score=25 → ALLOW
+[!!] TX #2: swap 5000 HBAR ($436.15)     → score=50 → WARN
+[XX] TX #3: transfer to 0x...dead        → score=85 → BLOCK
+[!!] TX #4: contract-call 2000 HBAR      → score=55 → WARN
+
+Summary: 1 ALLOW | 2 WARN | 1 BLOCK | $632.42 exposure | $17.45 blocked
+```
+
+**Run it yourself:**
+```bash
+cd workflow/aegispay
+bun install --cwd ./aegispay-workflow
+cre workflow simulate ./aegispay-workflow -T staging-settings --non-interactive --trigger-index 0
+```
+
+### Chainlink Price Feed — On-Chain Risk Adjustment
+
+PolicyManager v2 reads HBAR/USD price from a **Chainlink AggregatorV3Interface** on-chain and adjusts the risk score based on the real USD value of the transfer.
+
+```solidity
+function getVerdictWithPrice(uint256 baseScore, uint256 amountWei)
+    → reads Chainlink price feed
+    → adjusts score based on USD value
+    → emits PriceAwareVerdict event (state change)
+    → returns verdict
+```
+
+**State change TX:** [`0x8b8b8a6b...`](https://hashscan.io/testnet/transaction/0x8b8b8a6bd87bfa28f2d7240f85920d0ed705cd19cc6d746e6cabc2b5423b2971)
 
 ---
 
-## Contracts (Hedera Testnet)
+## Ledger Integration
+
+When PolicyManager returns **WARN**, the agent cannot move funds without human approval.
+
+- **Ledger Wallet Provider** (`@ledgerhq/ledger-wallet-provider`) via EIP-6963
+- **ERC-7730 Clear Signing** JSON files for all 3 contracts
+- Ledger screen shows human-readable tx details, not raw calldata
+
+---
+
+## Contracts
+
+### Original (Hedera Testnet)
 
 | Contract | Address | HashScan |
 |----------|---------|----------|
@@ -275,32 +140,42 @@ The Ledger device displays human-readable transaction details (not raw hex) than
 | PolicyManager | `0x226F68C0D8F26A478F4F64d2733376DAB98Fcc6c` | [View](https://hashscan.io/testnet/contract/0x226F68C0D8F26A478F4F64d2733376DAB98Fcc6c) |
 | AssessmentRegistry | `0xeA86E74c8c89a30F6180B4d5c3d9C58C981d3638` | [View](https://hashscan.io/testnet/contract/0xeA86E74c8c89a30F6180B4d5c3d9C58C981d3638) |
 
+### Chainlink Integration (Hedera Testnet)
+
+| Contract | Address | HashScan |
+|----------|---------|----------|
+| PolicyManager v2 | `0xc5b07cdc6908ecee95ce721da8374dcda2588b7a` | [View](https://hashscan.io/testnet/contract/0xc5b07cdc6908ecee95ce721da8374dcda2588b7a) |
+| MockPriceFeed | `0x1bd8c9fd55a0140e5f7db18546334b2ae8ca59d4` | [View](https://hashscan.io/testnet/contract/0x1bd8c9fd55a0140e5f7db18546334b2ae8ca59d4) |
+
+> On mainnet, MockPriceFeed is replaced by the real Chainlink HBAR/USD feed at `0xAF685FB45C12b92b5054ccb9313e135525F9b5d5`
+
 ---
 
 ## Project Structure
 
 ```
 flujoAgente/
-├── contracts/                  Solidity contracts (Foundry)
-│   ├── src/                    AgentRegistry, PolicyManager, AssessmentRegistry
-│   ├── script/                 Deploy script for Hedera
-│   └── test/                   15 Foundry tests (all passing)
 │
-├── agent/                      Autonomous AI Agent
-│   ├── src/agent.ts            Dual-mode: viem (local) / Hedera Agent Kit (testnet)
-│   ├── src/addresses-hedera.json
-│   └── .env.example            HEDERA_ACCOUNT_ID, AGENT_PRIVATE_KEY, etc.
+├── src/                        Frontend (Next.js 14)
+│   ├── app/                    Pages: /, /simulate, /agents, /policy, /history, /workflow
+│   ├── app/api/                Server-side RPC routes
+│   ├── components/             Sidebar, VerdictBadge, Providers
+│   └── lib/                    wagmi config, contracts, ledger
 │
-├── src/                        Next.js 14 Frontend
-│   ├── app/                    Pages: /, /simulate, /agents, /policy, /history
-│   ├── app/api/                Server-side RPC routes to Hedera
-│   ├── components/             Sidebar, VerdictBadge, PageWrapper, Providers
-│   ├── lib/wagmi.ts            Hedera Testnet chain config (chain 296)
-│   ├── lib/ledger.ts           Ledger Wallet Provider init (EIP-6963)
-│   ├── lib/contracts.ts        ABIs + deployed addresses
-│   └── clear-signing/          ERC-7730 JSON files (3 contracts)
+├── contracts/                  Smart Contracts (Foundry)
+│   ├── src/                    AgentRegistry, PolicyManager, AssessmentRegistry, MockPriceFeed
+│   ├── script/                 Deploy scripts (Hedera Testnet)
+│   └── test/                   23 tests (all passing)
 │
-└── next.config.mjs
+├── agent/                      Autonomous AI Agent (TypeScript)
+│   └── src/agent.ts            Mission picker → risk engine → policy check → execute
+│
+└── workflow/aegispay/          Chainlink CRE Workflow
+    ├── aegispay-workflow/      TypeScript SDK workflow
+    │   ├── workflow.ts         HTTP fetch + risk scoring + verdict
+    │   ├── main.ts             CRE Runner entry point
+    │   └── config.staging.json 4 test scenarios
+    └── project.yaml            CRE CLI settings
 ```
 
 ---
@@ -309,33 +184,32 @@ flujoAgente/
 
 ### Frontend
 ```bash
-git clone https://github.com/mariaelisaaraya/flujoAgente.git
-cd flujoAgente
 npm install
 npm run dev
 # Open http://localhost:3000
-# Connect MetaMask to Hedera Testnet (Chain ID 296, RPC https://testnet.hashio.io/api)
+# Connect wallet to Hedera Testnet (Chain 296)
 ```
 
-### Autonomous Agent on Hedera
+### Agent
 ```bash
 cd agent
 npm install
-cp .env.example .env
-# Edit .env with your Hedera credentials:
-#   NETWORK=hedera
-#   HEDERA_ACCOUNT_ID=0.0.XXXXX
-#   AGENT_PRIVATE_KEY=0x...
-#   TARGET_ADDRESS=0x...
-#   TARGET_ACCOUNT_ID=0.0.XXXXX
+cp .env.example .env   # Add your Hedera credentials
 npm run agent
 ```
 
-### Contracts (local testing)
+### Contracts
 ```bash
 cd contracts
-forge install foundry-rs/forge-std --no-git
-forge test -vvv       # 15/15 tests pass
+forge test   # 23/23 tests pass
+```
+
+### CRE Workflow
+```bash
+cd workflow/aegispay
+bun install --cwd ./aegispay-workflow
+~/bin/cre login
+cre workflow simulate ./aegispay-workflow -T staging-settings --non-interactive --trigger-index 0
 ```
 
 ---
@@ -344,147 +218,52 @@ forge test -vvv       # 15/15 tests pass
 
 | Layer | Technology |
 |-------|-----------|
-| **Contracts** | Solidity 0.8.24, Foundry, Hedera Testnet EVM |
-| **Agent** | TypeScript, Hedera Agent Kit, @hashgraph/sdk, AgentMode.AUTONOMOUS |
-| **Frontend** | Next.js 14, Tailwind CSS, wagmi v2, viem, Framer Motion |
-| **Ledger** | Ledger Wallet Provider (EIP-6963), ERC-7730 Clear Signing JSON |
-| **Chain** | Hedera Testnet (chain 296, JSON-RPC relay via hashio.io) |
-| **Explorer** | HashScan (tx links for every on-chain write) |
+| Contracts | Solidity 0.8.24, Foundry, Hedera Testnet EVM |
+| Frontend | Next.js 14, Tailwind CSS, wagmi v2, viem |
+| Agent | TypeScript, viem, Hedera Agent Kit |
+| Chainlink | CRE SDK (`@chainlink/cre-sdk`), AggregatorV3Interface, Price Feeds |
+| Ledger | Wallet Provider (EIP-6963), ERC-7730 Clear Signing |
+| Chain | Hedera Testnet (296) |
 
 ---
 
-## Agent-Friendly Information
+## Bounty Qualification
 
-> Structured reference for AI agents, copilots, and developer tools integrating with AegisPay.
+### Hedera — AI on Hedera
+- Hedera Agent Kit SDK for native HBAR transfers
+- 3 smart contracts on Hedera EVM
+- Verified on HashScan
 
-### Network
+### Ledger — AI Agents x Clear Signing
+- Human-in-the-loop for WARN verdicts
+- Ledger Wallet Provider via EIP-6963
+- ERC-7730 Clear Signing JSON for all contracts
 
-```
-Chain:          Hedera Testnet
-Chain ID:       296
-RPC:            https://testnet.hashio.io/api
-Native Token:   HBAR (18 decimals)
-Explorer:       https://hashscan.io/testnet
-```
+### Chainlink — Best Workflow with CRE ($4,000)
+- CRE Workflow with TypeScript SDK
+- HTTP capability + DON consensus (`consensusIdenticalAggregation`)
+- Successful simulation via CRE CLI
+- Meaningfully used: risk assessment is the core of AegisPay
 
-### Contracts
-
-```
-AgentRegistry:      0xe0595502b10398D7702Ed43eDcf8101Fd67c0991
-PolicyManager:      0x226F68C0D8F26A478F4F64d2733376DAB98Fcc6c
-AssessmentRegistry: 0xeA86E74c8c89a30F6180B4d5c3d9C58C981d3638
-```
-
-### Contract Interfaces
-
-```solidity
-// AgentRegistry — Register and manage AI agent identities (ERC-8004 pattern)
-registerAgent(address agent, string metadataURI)    // Register a new agent (caller = owner)
-toggleAgent(address agent, bool active)             // Enable/disable agent (owner only)
-getAgent(address agent) -> (owner, metadataURI, active, registeredAt)
-agentCount() -> uint256
-
-// PolicyManager — Configurable risk policy engine
-getVerdict(uint256 riskScore) -> string             // Returns "ALLOW", "WARN", or "BLOCK"
-getThresholds() -> (uint256 low, uint256 medium)    // Current policy thresholds
-setPolicy(uint256 low, uint256 medium)              // Update thresholds (owner only)
-
-// AssessmentRegistry — Immutable on-chain audit trail
-createAssessment(address agent, address target, uint256 riskScore, string verdict, string reason) -> uint256
-getAssessment(uint256 id) -> (agent, target, riskScore, verdict, reason, timestamp)
-getAssessmentsByAgent(address agent) -> uint256[]
-totalAssessments() -> uint256
-```
-
-### Policy Rules
-
-```
-Risk Score    Verdict    Action
-─────────    ───────    ──────
-0  - 29      ALLOW      Agent executes transfer autonomously
-30 - 69      WARN       Requires human approval (Ledger device signs)
-70 - 100     BLOCK      Transfer denied, no funds moved
-```
-
-### Risk Score Calculation
-
-```
-Factor                  Points
-──────                  ──────
-Amount > 10 HBAR        +35
-Amount > 1 HBAR         +15
-Amount <= 1 HBAR        +5
-Known risky address     +60
-Trusted address         -10
-First interaction       +15
-
-Final score clamped to 0-100
-```
-
-### API Endpoints
-
-```
-GET /api/verdict?score={0-100}    -> { verdict: "ALLOW"|"WARN"|"BLOCK" }
-GET /api/thresholds               -> { low: 30, medium: 70 }
-GET /api/stats                    -> { agentCount, total, blocked, avgScore, recent[] }
-GET /api/assessments              -> Assessment[]
-```
-
-### Integration Example (Agent)
-
-```typescript
-import { HederaBuilder, handleTransaction, AgentMode } from "hedera-agent-kit";
-import { Client, PrivateKey, ContractCallQuery, ContractExecuteTransaction,
-         ContractFunctionParameters, Hbar, ContractId } from "@hashgraph/sdk";
-
-// 1. Setup Hedera client
-const client = Client.forTestnet().setOperator(accountId, privateKey);
-
-// 2. Check policy verdict
-const verdict = new ContractCallQuery()
-  .setContractId(ContractId.fromEvmAddress(0, 0, "0x226F...Fcc6c"))
-  .setGas(100_000)
-  .setFunction("getVerdict", new ContractFunctionParameters().addUint256(riskScore));
-const result = await verdict.execute(client);  // "ALLOW", "WARN", or "BLOCK"
-
-// 3. Transfer HBAR via Hedera Agent Kit (if ALLOW)
-const tx = HederaBuilder.transferHbar({
-  hbarTransfers: [
-    { accountId: "0.0.sender", amount: new Hbar(amount).negated() },
-    { accountId: "0.0.target", amount: new Hbar(amount) },
-  ],
-});
-await handleTransaction(tx, client, { mode: AgentMode.AUTONOMOUS });
-
-// 4. Record assessment on-chain
-const assess = new ContractExecuteTransaction()
-  .setContractId(ContractId.fromEvmAddress(0, 0, "0xeA86...d3638"))
-  .setGas(400_000)
-  .setFunction("createAssessment", new ContractFunctionParameters()
-    .addAddress(agentAddr)
-    .addAddress(targetAddr)
-    .addUint256(riskScore)
-    .addString("ALLOW")
-    .addString("Low risk transfer"));
-await assess.execute(client);
-```
-
-### Clear Signing (ERC-7730)
-
-Human-readable transaction descriptions for Ledger devices:
-
-```
-File                                    Contract              Functions
-────                                    ────────              ─────────
-aegispay-agent-registry.json            AgentRegistry         registerAgent, toggleAgent
-aegispay-policy-manager.json            PolicyManager         setPolicy
-aegispay-assessment-registry.json       AssessmentRegistry    createAssessment
-```
-
-Each file maps function parameters to labels like "AI Agent", "Risk Score (0-100)", "Transaction Target" — so the Ledger screen shows what you're actually signing, not raw calldata.
+### Chainlink — Connect the World ($1,000)
+- PolicyManager reads Chainlink AggregatorV3Interface on-chain
+- `getVerdictWithPrice()` adjusts risk based on real USD value
+- State change: `PriceAwareVerdict` event emitted
+- 8 tests with MockPriceFeed, 23 total passing
 
 ---
 
-## Team
+## Tests
 
-Built by **AegisPay** at ETHGlobal Cannes 2026.
+```
+23 tests, all passing
+
+AgentRegistry:      register, duplicate prevention, toggle, permissions
+PolicyManager:      thresholds, verdicts (ALLOW/WARN/BLOCK), price feed, value adjustment
+AssessmentRegistry: create, agent validation, history, queries
+Chainlink:          setPriceFeed, getLatestPrice, verdictWithPrice (3 scenarios), event emission
+```
+
+---
+
+Built at **ETHGlobal Cannes 2026**.
