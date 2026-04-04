@@ -1,112 +1,122 @@
-<div style="text-align:center" align="center">
-    <a href="https://chain.link" target="_blank">
-        <img src="https://raw.githubusercontent.com/smartcontractkit/chainlink/develop/docs/logo-chainlink-blue.svg" width="225" alt="Chainlink logo">
-    </a>
+# AegisPay × Chainlink CRE — Decentralized Risk Assessment Workflow
 
-[![License](https://img.shields.io/badge/license-MIT-blue)](https://github.com/smartcontractkit/cre-templates/blob/main/LICENSE)
-[![CRE Home](https://img.shields.io/static/v1?label=CRE\&message=Home\&color=blue)](https://chain.link/chainlink-runtime-environment)
-[![CRE Documentation](https://img.shields.io/static/v1?label=CRE\&message=Docs\&color=blue)](https://docs.chain.link/cre)
+> Trust layer for autonomous AI agents, powered by Chainlink's Decentralized Oracle Network.
 
-</div>
+## What it does
 
-## Quick start
-
-### 1) Add the ABI (TypeScript)
-
-Place your ABI under `contracts/abi` as a `.ts` module and export it as `as const`. Then optionally re-export it from `contracts/abi/index.ts` for clean imports.
-
-```ts
-// contracts/abi/PriceFeedAggregator.ts
-import type { Abi } from 'viem';
-
-export const PriceFeedAggregator = [
-  // ... ABI array contents from the contract page ...
-] as const;
-```
-
-```ts
-// contracts/abi/index.ts
-export * from './PriceFeedAggregator';
-// add more as needed:
-// export * from './IERC20';
+This CRE workflow runs on a Chainlink DON to provide **fault-tolerant, trust-minimized risk assessment** for AI agent transactions on Hedera.
 
 ```
-
-> You can create additional ABI files the same way (e.g., `IERC20.ts`), exporting them as `as const`.
-
-### 2) Configure RPC in `project.yaml`
-
-Add an RPC for the chain you want to read from. For Arbitrum One mainnet:
-
-```yaml
-rpcs:
-  - chain-name: ethereum-mainnet-arbitrum-1
-    url: <YOUR_ARBITRUM_MAINNET_RPC_URL>
+Cron Trigger (every 1 min)
+    │
+    ▼
+HTTP Capability ──► CoinGecko API (HBAR/USD live price)
+    │                   with DON consensus
+    ▼
+Risk Engine ──► Score each pending transaction
+    │           • Address reputation (burn addr = +60)
+    │           • USD value analysis (real-time price × amount)
+    │           • Action type risk (swap +10, contract-call +15)
+    │           • First interaction penalty (+15)
+    ▼
+PolicyManager Logic ──► ALLOW (score < 30) | WARN (30-69) | BLOCK (≥70)
+    │
+    ▼
+Structured Assessment Report (JSON)
 ```
 
-### 3) Configure the workflow
+## Why CRE?
 
-Create or update `config.json`:
+Without CRE, AegisPay's risk scoring runs client-side or on a single server — a single point of failure. With CRE:
 
-```json
-{
-  "schedule": "0 */10 * * * *",
-  "chainName": "ethereum-mainnet-arbitrum-1",
-  "feeds": [
-    {
-      "name": "BTC/USD",
-      "address": "0x6ce185860a4963106506C203335A2910413708e9"
-    },
-    {
-      "name": "ETH/USD",
-      "address": "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612"
-    }
-  ]
-}
+- **Decentralized execution**: Multiple DON nodes run the same assessment, reach consensus
+- **Fault-tolerant**: No single node can manipulate the risk score
+- **Real-time data**: HTTP capability fetches live HBAR price with consensus verification
+- **Institutional-grade**: Same infrastructure used by DeFi protocols managing billions
+
+## Simulation Output
+
+```
+✓ Workflow compiled
+[SIMULATION] Running trigger: cron-trigger@1.0.0
+
+  AegisPay Risk Assessment — CRE Workflow
+  HBAR/USD Price (live): $0.087
+  Policy: ALLOW < 30 | WARN < 70 | BLOCK >= 70
+
+  [OK] TX #1: transfer 50 HBAR ($4.36)    → score=25 → ALLOW
+  [!!] TX #2: swap 5000 HBAR ($436.15)     → score=50 → WARN
+  [XX] TX #3: transfer to 0x...dead        → score=85 → BLOCK
+  [!!] TX #4: contract-call 2000 HBAR      → score=55 → WARN
+
+  Summary: 1 ALLOW | 2 WARN | 1 BLOCK
+  Total USD exposure: $632.42
+  USD blocked: $17.45
+
+✓ Status: SUCCESS
 ```
 
-* `schedule` uses a 6-field cron expression — this runs every 10 minutes at second 0.
-* `chainName` must match the RPC entry in `project.yaml`.
-* `feeds` is a list of (name, address) pairs to read.
+## Quick Start
 
-### 4) Ensure `workflow.yaml` points to your config
+### Prerequisites
 
-```yaml
-staging-settings:
-  user-workflow:
-    workflow-name: "my-workflow"
-  workflow-artifacts:
-    workflow-path: "."
-    config-path: "./config.json"
-    secrets-path: ""
-```
+- [Bun](https://bun.sh) v1.3+
+- [CRE CLI](https://docs.chain.link/cre/getting-started/cli-installation) v1.9+
+- `cre login` (authenticate once)
 
-### 5) Install dependencies
-
-From your project root:
+### Run
 
 ```bash
-bun install --cwd ./my-workflow
+cd workflow/aegispay
+
+# Install deps
+bun install --cwd ./aegispay-workflow
+
+# Simulate
+cre workflow simulate ./aegispay-workflow -T staging-settings --non-interactive --trigger-index 0
 ```
 
-### 6) Run a local simulation
-
-From your project root:
-
-```bash
-cre workflow simulate my-workflow
-```
-
-You should see output similar to:
+## Architecture — How it connects to AegisPay
 
 ```
-Workflow compiled
-2025-10-30T09:24:27Z [SIMULATION] Simulator Initialized
-
-2025-10-30T09:24:27Z [SIMULATION] Running trigger trigger=cron-trigger@1.0.0
-2025-10-30T09:24:28Z [USER LOG] msg="Data feed read" chain=ethereum-mainnet-arbitrum-1 feed=BTC/USD address=0x6ce185860a4963106506C203335A2910413708e9 decimals=8 latestAnswerRaw=10803231994131 latestAnswerScaled=108032.31994131
-2025-10-30T09:24:29Z [USER LOG] msg="Data feed read" chain=ethereum-mainnet-arbitrum-1 feed=ETH/USD address=0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612 decimals=8 latestAnswerRaw=378968000000 latestAnswerScaled=3789.68
-
-Workflow Simulation Result:
- "[{\"name\":\"BTC/USD\",\"address\":\"0x6ce185860a4963106506C203335A2910413708e9\",\"decimals\":8,\"latestAnswerRaw\":\"10803231994131\",\"scaled\":\"108032.31994131\"},{\"name\":\"ETH/USD\",\"address\":\"0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612\",\"decimals\":8,\"latestAnswerRaw\":\"378968000000\",\"scaled\":\"3789.68\"}]"
+┌─────────────────────────────────────────────────────────┐
+│                    AegisPay System                       │
+│                                                          │
+│  ┌──────────┐   ┌──────────────┐   ┌──────────────────┐ │
+│  │ Frontend  │   │ Agent (TS)   │   │ CRE Workflow     │ │
+│  │ Next.js   │   │ Autonomous   │   │ (Chainlink DON)  │ │
+│  │           │   │              │   │                  │ │
+│  │ /simulate │   │ picks mission│   │ HTTP: HBAR price │ │
+│  │ /policy   │   │ scores risk  │   │ Risk scoring     │ │
+│  │ /history  │   │ executes tx  │   │ DON consensus    │ │
+│  └─────┬─────┘   └──────┬───────┘   └────────┬─────────┘ │
+│        │                │                     │           │
+│        ▼                ▼                     ▼           │
+│  ┌──────────────────────────────────────────────────────┐ │
+│  │              Hedera Testnet (On-Chain)                │ │
+│  │  PolicyManager ─── AssessmentRegistry ─── AgentReg   │ │
+│  └──────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────┘
 ```
+
+## Bounty Qualification
+
+**Best workflow with Chainlink CRE ($4,000)**
+
+- ✅ CRE Workflow built with TypeScript SDK (`@chainlink/cre-sdk`)
+- ✅ Integrates blockchain (Hedera) with external API (CoinGecko price feed)
+- ✅ Successful simulation via CRE CLI demonstrated
+- ✅ Meaningfully used: risk assessment is the core value prop of AegisPay
+- ✅ DON consensus on HTTP responses (consensusIdenticalAggregation)
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| Workflow SDK | `@chainlink/cre-sdk` v1.5.0 |
+| CLI | CRE CLI v1.9.0 |
+| Runtime | Bun v1.3+ |
+| HTTP Data | CoinGecko API (HBAR/USD) |
+| Consensus | `consensusIdenticalAggregation` |
+| On-chain | Hedera Testnet (EVM) |
+| Contracts | PolicyManager, AssessmentRegistry, AgentRegistry |
