@@ -29,17 +29,18 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${inconsolata.variable} min-h-dvh antialiased`}
-        style={{ backgroundColor: "#f7f7f8", color: "#0f0f10" }}
+        className={`${inter.variable} ${inconsolata.variable} antialiased`}
+        style={{ backgroundColor: "#f7f7f8", color: "#0f0f10", margin: 0, padding: 0 }}
       >
         <Providers>
-          <Sidebar />
-          <main
-            className="md:ml-[240px] min-h-dvh overflow-y-auto px-4 py-6 md:px-8 md:py-8"
-            style={{ backgroundColor: "#f7f7f8" }}
-          >
-            <div className="max-w-5xl">{children}</div>
-          </main>
+          <div style={{ display: "flex", minHeight: "100vh" }}>
+            <Sidebar />
+            <main style={{ flex: 1, minWidth: 0, overflow: "auto", padding: "32px 32px", marginLeft: "240px", backgroundColor: "#f7f7f8" }}>
+              <div style={{ maxWidth: "1024px" }}>
+                {children}
+              </div>
+            </main>
+          </div>
         </Providers>
       </body>
     </html>
